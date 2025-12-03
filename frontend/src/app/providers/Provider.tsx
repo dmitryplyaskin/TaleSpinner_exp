@@ -1,15 +1,13 @@
-import { ChakraProvider } from "@chakra-ui/react"
-import { ThemeProvider } from "next-themes"
-import { system } from "@/shared/config/theme"
-import { ReactNode } from "react"
+import { ChakraProvider } from "@chakra-ui/react";
+import { ThemeProvider } from "next-themes";
+import { system } from "@/shared/config/theme";
 
-export function Provider({ children }: { children: ReactNode }) {
+export function Provider({ children }: { children: React.ReactNode }) {
   return (
     <ChakraProvider value={system}>
       <ThemeProvider attribute="class" disableTransitionOnChange>
         {children}
       </ThemeProvider>
     </ChakraProvider>
-  )
+  );
 }
-

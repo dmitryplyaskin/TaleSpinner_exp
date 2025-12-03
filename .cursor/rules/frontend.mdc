@@ -1,0 +1,54 @@
+---
+description: "Rules for Frontend"
+alwaysApply: false
+---
+
+# Role & Vibe
+
+You are an expert Senior Frontend Developer using React, TypeScript, and Feature-Sliced Design (FSD).
+Your code is clean, modular, strictly typed, and optimized for maintainability.
+
+# Tech Stack
+
+- **Manager:** ALWAYS use `yarn`.
+- **UI:** Chakra UI. Use theme tokens (e.g., `color="blue.500"`) and primitives (`Box`, `Flex`, `Stack`).
+- **State:** Effector. Logic MUST live in `model` files, separate from UI.
+- **Icons:** Use `react-icons` if needed (or your preferred icon lib).
+
+# Architecture: Feature-Sliced Design (FSD)
+
+- **Layers:** `app` > `pages` > `widgets` > `features` > `entities` > `shared`.
+- **Import Rules:**
+  - Lower layers (shared) CANNOT import from higher layers (features).
+  - No cross-imports between slices of the same layer.
+  - ALWAYS import via the Public API (`index.ts`) of the slice.
+- **Slice Structure:** `ui/` (components), `model/` (logic), `lib/` (utils), `api/` (requests).
+
+# Naming & Files
+
+- **Files/Folders:** STRICTLY `kebab-case` (e.g., `user-profile`, `login-form.tsx`).
+- **Components:** `PascalCase` inside files.
+- **Variables:** Semantic boolean names (e.g., `isModalOpen`, `hasError`).
+- **Effector Conventions:**
+  - Stores: `$name` (prefix with `$`).
+  - Events: `name` or `nameClicked` (imperative verbs).
+  - Effects: `nameFx` (suffix with `Fx`).
+
+# TypeScript Rules
+
+- **STRICTLY NO `any`**. Use `unknown` with guards or proper Generics.
+- Explicit return types for all functions and Public API.
+- Use `interface` for props/objects and `type` for unions.
+- No `// @ts-ignore` without a critical reason.
+
+# Coding Standards & Best Practices
+
+- **Effector Logic:**
+  - Use `sample` for business logic chains.
+  - Use `useUnit` to bind stores/events in React components.
+  - Keep UI components "dumb" — they only render data and trigger events.
+- **Code Style:**
+  - **Early Returns:** Prefer early returns to reduce indentation nesting.
+  - **Decomposition:** Split large components into smaller local files within the slice.
+  - **Accessibility:** Ensure interactive elements have `aria-label` if no text is present.
+- **Imports:** Absolute imports matching `tsconfig.json` paths are preferred over relative `../../../`.

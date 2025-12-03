@@ -10,6 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.30.0",
+    "@emotion/react": "^11.14.0",
+    "effector": "^23.4.4",
+    "effector-react": "^23.3.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

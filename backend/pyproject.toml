@@ -21,6 +21,9 @@ dependencies = [
     "alembic (>=1.17.2,<2.0.0)",
 ]
 
+[project.scripts]
+task = "taskipy.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.0",
@@ -33,6 +36,11 @@ dev = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [
+    { include = "app" }
+]
 
 [dependency-groups]
 dev = [

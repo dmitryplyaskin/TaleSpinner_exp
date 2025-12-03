@@ -1,56 +1,23 @@
-# TaleSpinner Exp
+# TaleSpinner Exp (Monorepo)
 
-Экспериментальный проект на Python 3.12+ с использованием современного стека технологий для AI-разработки.
+Это монорепозиторий экспериментального AI-проекта.
 
-## Технологический стек
+## Структура
 
-*   **FastAPI** (Веб-фреймворк)
-*   **LiteLLM** (Универсальный интерфейс для LLM)
-*   **ChromaDB** (Векторная база данных)
-*   **LangGraph** (Оркестрация агентов)
-*   **SQLModel** (ORM на базе Pydantic и SQLAlchemy)
-*   **Alembic** (Миграции базы данных)
-*   **Jinja2** (Шаблонизатор)
+*   `backend/` - Серверная часть (FastAPI, Python 3.12+, LangGraph, ChromaDB)
+*   `frontend/` - Клиентская часть (В разработке)
 
-## Установка и запуск
+## Работа с проектом
 
-Проект использует **Poetry** для управления зависимостями.
+### Backend
 
-### 1. Установка зависимостей
+Все команды для бэкенда выполняются из директории `backend`:
 
 ```bash
+cd backend
 poetry install
+poetry run task dev
 ```
 
-### 2. Настройка окружения
+Подробнее см. [backend/README.md](backend/README.md).
 
-Создайте файл `.env` в корне проекта (можно скопировать пример, если он есть, или создать с нуля):
-
-```ini
-# Пример .env
-DATABASE_URL=sqlite:///./talespinner.db
-# OPENAI_API_KEY=sk-...
-```
-
-### 3. База данных
-
-Применение миграций:
-
-```bash
-poetry run alembic upgrade head
-```
-
-Создание новой миграции (после изменения моделей):
-
-```bash
-poetry run alembic revision --autogenerate -m "Описание изменений"
-```
-
-### 4. Запуск сервера
-
-```bash
-poetry run uvicorn app.main:app --reload
-```
-
-Сервер будет доступен по адресу: http://127.0.0.1:8000
-Документация API: http://127.0.0.1:8000/docs

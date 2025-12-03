@@ -33,3 +33,17 @@ dev = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "taskipy (>=1.14.1,<2.0.0)"
+]
+
+[tool.taskipy.tasks]
+dev = "uvicorn app.main:app --reload"
+start = "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+test = "pytest"
+lint = "ruff check ."
+format = "ruff format ."
+upgrade = "alembic upgrade head"
+migrate = "alembic revision --autogenerate"

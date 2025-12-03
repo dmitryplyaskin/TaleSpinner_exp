@@ -1,14 +1,16 @@
-import { Box, Heading, Text, VStack } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react"
+import { Sidebar } from "@/widgets/sidebar/ui/sidebar"
+import { HomePage } from "@/pages/home/ui/home-page"
 
 function App() {
   return (
-    <Box textAlign="center" fontSize="xl" pt="30vh">
-      <VStack gap="8">
-        <Heading size="2xl">TaleSpinner</Heading>
-        <Text>Feature-Sliced Design + Chakra UI v3</Text>
-      </VStack>
-    </Box>
-  );
+    <Flex w="full" minH="100vh" bg="bg.subtle">
+      <Sidebar />
+      <Box flex="1" overflow="auto">
+        <HomePage />
+      </Box>
+    </Flex>
+  )
 }
 
-export default App;
+export default App

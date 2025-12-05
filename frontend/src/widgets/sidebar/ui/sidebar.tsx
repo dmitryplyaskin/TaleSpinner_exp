@@ -12,10 +12,12 @@ import {
   LuChevronLeft,
   LuChevronRight,
   LuGlobe,
+  LuKey,
 } from "react-icons/lu";
 import { useState } from "react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { SettingsDrawer } from "@/features/settings/ui/settings-drawer";
+import { ApiSettingsDrawer } from "@/features/api-settings";
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -69,6 +71,7 @@ const NavItem = ({
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [apiSettingsOpen, setApiSettingsOpen] = useState(false);
 
   return (
     <>
@@ -126,6 +129,12 @@ export const Sidebar = () => {
         <VStack gap={1} w="full" align="stretch">
           <Separator borderColor="border.subtle" mb={2} />
           <NavItem
+            icon={LuKey}
+            label="API Settings"
+            collapsed={collapsed}
+            onClick={() => setApiSettingsOpen(true)}
+          />
+          <NavItem
             icon={LuSettings}
             label="Settings"
             collapsed={collapsed}
@@ -134,6 +143,10 @@ export const Sidebar = () => {
         </VStack>
       </Box>
 
+      <ApiSettingsDrawer
+        open={apiSettingsOpen}
+        onOpenChange={(e) => setApiSettingsOpen(e.open)}
+      />
       <SettingsDrawer
         open={settingsOpen}
         onOpenChange={(e) => setSettingsOpen(e.open)}

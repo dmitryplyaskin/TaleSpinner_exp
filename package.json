@@ -1,5 +1,33 @@
 {
-  "dependencies": {
-    "next-themes": "^0.4.6"
+  "name": "talespinner-exp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TaleSpinner - Interactive Storytelling Platform",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "yarn --cwd frontend dev",
+    "dev:backend": "cd backend && poetry run task dev",
+    "build": "yarn --cwd frontend build",
+    "preview": "yarn --cwd frontend preview",
+    "lint": "concurrently \"npm run lint:frontend\" \"npm run lint:backend\"",
+    "lint:frontend": "yarn --cwd frontend lint",
+    "lint:backend": "cd backend && poetry run task lint",
+    "format:backend": "cd backend && poetry run task format",
+    "test:backend": "cd backend && poetry run task test",
+    "start:backend": "cd backend && poetry run task start",
+    "db:upgrade": "cd backend && poetry run task upgrade",
+    "db:migrate": "cd backend && poetry run task migrate",
+    "install:frontend": "yarn --cwd frontend install",
+    "install:backend": "cd backend && poetry install",
+    "install:all": "concurrently \"npm run install:frontend\" \"npm run install:backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

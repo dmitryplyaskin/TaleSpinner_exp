@@ -132,4 +132,3 @@ const ModelConfigItem = ({
     </HStack>
   );
 };
-

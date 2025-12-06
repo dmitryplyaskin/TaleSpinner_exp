@@ -133,4 +133,3 @@ const EmbeddingConfigItem = ({
     </HStack>
   );
 };
-

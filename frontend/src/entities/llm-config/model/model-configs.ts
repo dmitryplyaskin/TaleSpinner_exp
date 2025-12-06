@@ -102,4 +102,3 @@ sample({
   clock: removeModelConfig,
   target: deleteModelConfigFx,
 });
-

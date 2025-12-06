@@ -145,4 +145,3 @@ const PresetItem = ({ preset, onDelete, isDeleting }: PresetItemProps) => {
     </HStack>
   );
 };
-

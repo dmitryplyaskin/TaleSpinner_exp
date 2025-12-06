@@ -120,4 +120,3 @@ const TokenItem = ({ token, onDelete, isDeleting }: TokenItemProps) => {
     </HStack>
   );
 };
-

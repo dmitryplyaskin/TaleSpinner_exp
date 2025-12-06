@@ -106,4 +106,3 @@ sample({
   clock: removeEmbeddingConfig,
   target: deleteEmbeddingConfigFx,
 });
-

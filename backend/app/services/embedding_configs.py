@@ -25,6 +25,8 @@ def create_embedding_config(
         dimensions=payload.dimensions,
         batch_size=payload.batch_size,
         provider_settings=payload.provider_settings,
+        base_url=payload.base_url,
+        http_headers=payload.http_headers,
     )
     session.add(config)
     session.commit()

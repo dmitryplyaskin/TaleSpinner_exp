@@ -27,6 +27,9 @@ class EmbeddingConfigCreate(EmbeddingConfigBase):
     batch_size: int = Field(default=100, ge=1, le=1000)
     provider_settings: dict[str, Any] = Field(default_factory=dict)
 
+    base_url: str | None = None
+    http_headers: dict[str, Any] = Field(default_factory=dict)
+
 
 class EmbeddingConfigUpdate(SQLModel):
     """Schema for updating an embedding config."""
@@ -40,6 +43,9 @@ class EmbeddingConfigUpdate(SQLModel):
     batch_size: int | None = Field(default=None, ge=1, le=1000)
     provider_settings: dict[str, Any] | None = None
 
+    base_url: str | None = None
+    http_headers: dict[str, Any] | None = None
+
 
 class EmbeddingConfigRead(EmbeddingConfigBase):
     """Schema for reading an embedding config."""
@@ -51,6 +57,9 @@ class EmbeddingConfigRead(EmbeddingConfigBase):
     dimensions: int | None
     batch_size: int
     provider_settings: dict[str, Any]
+
+    base_url: str | None
+    http_headers: dict[str, Any]
 
     created_at: datetime
     updated_at: datetime

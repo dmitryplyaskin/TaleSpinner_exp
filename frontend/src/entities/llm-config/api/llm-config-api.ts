@@ -34,6 +34,7 @@ export interface FetchProviderModelsParams {
   modelType?: ModelType;
   forceRefresh?: boolean;
   apiKey?: string;
+  baseUrl?: string;
 }
 
 export const fetchProviderModels = async ({
@@ -41,11 +42,13 @@ export const fetchProviderModels = async ({
   modelType,
   forceRefresh,
   apiKey,
+  baseUrl,
 }: FetchProviderModelsParams): Promise<ProviderModelsResponse> => {
   const params = new URLSearchParams();
   if (modelType) params.set("model_type", modelType);
   if (forceRefresh) params.set("force_refresh", "true");
   if (apiKey) params.set("api_key", apiKey);
+  if (baseUrl) params.set("base_url", baseUrl);
 
   const query = params.toString();
   const url = `/api/v1/providers/${providerId}/models${

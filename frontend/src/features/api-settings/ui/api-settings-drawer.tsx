@@ -1,7 +1,6 @@
-import { useEffect } from "react";
-import { Accordion, Span } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 import { useUnit } from "effector-react";
-import { LuKey, LuCpu, LuDatabase, LuPackage } from "react-icons/lu";
+import { Stack } from "@chakra-ui/react";
 
 import {
   DrawerRoot,
@@ -12,12 +11,23 @@ import {
   DrawerCloseTrigger,
 } from "@/components/ui/drawer";
 import { userModel } from "@/entities/user";
+import type { ProviderType } from "@/entities/llm-config/types";
 
-import { TokensSection } from "./tokens-section";
-import { ModelConfigsSection } from "./model-configs-section";
-import { EmbeddingConfigsSection } from "./embedding-configs-section";
-import { PresetsSection } from "./presets-section";
-import { initApiSettings } from "../model/api-settings-model";
+import { GlobalPresetBlock } from "./blocks/global-preset-block";
+import { ModelConfigBlock } from "./blocks/model-config-block";
+import { EmbeddingConfigBlock } from "./blocks/embedding-config-block";
+import { TokenManagementModal } from "./modals/token-management-modal";
+
+import {
+  initApiSettings,
+  $activePreset,
+  updateActivePreset,
+  mainModelForm,
+  ragModelForm,
+  guardModelForm,
+  storytellingModelForm,
+  embeddingForm,
+} from "../model/api-settings-model";
 
 interface ApiSettingsDrawerProps {
   open: boolean;
@@ -32,6 +42,11 @@ export const ApiSettingsDrawer = ({
     userModel.$currentUser,
     initApiSettings,
   ]);
+  const activePreset = useUnit($activePreset);
+  const updatePreset = useUnit(updateActivePreset);
+
+  const [tokenModalProvider, setTokenModalProvider] =
+    useState<ProviderType | null>(null);
 
   useEffect(() => {
     if (open && currentUser) {
@@ -42,79 +57,97 @@ export const ApiSettingsDrawer = ({
   if (!currentUser) return null;
 
   return (
-    <DrawerRoot
-      open={open}
-      onOpenChange={onOpenChange}
-      placement="start"
-      size="lg"
-    >
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>API Settings</DrawerTitle>
-          <DrawerCloseTrigger />
-        </DrawerHeader>
-        <DrawerBody>
-          <Accordion.Root
-            collapsible
-            multiple
-            defaultValue={["tokens"]}
-            variant="enclosed"
-          >
-            <Accordion.Item value="tokens">
-              <Accordion.ItemTrigger>
-                <LuKey />
-                <Span flex="1">API Tokens</Span>
-                <Accordion.ItemIndicator />
-              </Accordion.ItemTrigger>
-              <Accordion.ItemContent>
-                <Accordion.ItemBody>
-                  <TokensSection userId={currentUser.id} />
-                </Accordion.ItemBody>
-              </Accordion.ItemContent>
-            </Accordion.Item>
+    <>
+      <DrawerRoot
+        open={open}
+        onOpenChange={onOpenChange}
+        placement="start"
+        size="lg"
+      >
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>API Settings</DrawerTitle>
+            <DrawerCloseTrigger />
+          </DrawerHeader>
+          <DrawerBody>
+            <Stack gap={6} pb={8}>
+              <GlobalPresetBlock />
 
-            <Accordion.Item value="model-configs">
-              <Accordion.ItemTrigger>
-                <LuCpu />
-                <Span flex="1">Model Configurations</Span>
-                <Accordion.ItemIndicator />
-              </Accordion.ItemTrigger>
-              <Accordion.ItemContent>
-                <Accordion.ItemBody>
-                  <ModelConfigsSection userId={currentUser.id} />
-                </Accordion.ItemBody>
-              </Accordion.ItemContent>
-            </Accordion.Item>
+              {activePreset && (
+                <>
+                  <ModelConfigBlock
+                    title="Main Model"
+                    form={mainModelForm}
+                    configId={activePreset.main_model_config_id}
+                    onConfigChange={(id) =>
+                      updatePreset({ main_model_config_id: id })
+                    }
+                    onManageTokens={setTokenModalProvider}
+                  />
 
-            <Accordion.Item value="embedding-configs">
-              <Accordion.ItemTrigger>
-                <LuDatabase />
-                <Span flex="1">Embedding Configurations</Span>
-                <Accordion.ItemIndicator />
-              </Accordion.ItemTrigger>
-              <Accordion.ItemContent>
-                <Accordion.ItemBody>
-                  <EmbeddingConfigsSection userId={currentUser.id} />
-                </Accordion.ItemBody>
-              </Accordion.ItemContent>
-            </Accordion.Item>
+                  <ModelConfigBlock
+                    title="RAG Model"
+                    form={ragModelForm}
+                    configId={activePreset.rag_model_config_id}
+                    onConfigChange={(id) =>
+                      updatePreset({ rag_model_config_id: id })
+                    }
+                    enabled={activePreset.rag_enabled}
+                    onToggle={(enabled) =>
+                      updatePreset({ rag_enabled: enabled })
+                    }
+                    onManageTokens={setTokenModalProvider}
+                  />
 
-            <Accordion.Item value="presets">
-              <Accordion.ItemTrigger>
-                <LuPackage />
-                <Span flex="1">Presets</Span>
-                <Accordion.ItemIndicator />
-              </Accordion.ItemTrigger>
-              <Accordion.ItemContent>
-                <Accordion.ItemBody>
-                  <PresetsSection userId={currentUser.id} />
-                </Accordion.ItemBody>
-              </Accordion.ItemContent>
-            </Accordion.Item>
-          </Accordion.Root>
-        </DrawerBody>
-      </DrawerContent>
-    </DrawerRoot>
+                  <ModelConfigBlock
+                    title="Guard Model"
+                    form={guardModelForm}
+                    configId={activePreset.guard_model_config_id}
+                    onConfigChange={(id) =>
+                      updatePreset({ guard_model_config_id: id })
+                    }
+                    enabled={activePreset.guard_enabled}
+                    onToggle={(enabled) =>
+                      updatePreset({ guard_enabled: enabled })
+                    }
+                    onManageTokens={setTokenModalProvider}
+                  />
+
+                  <ModelConfigBlock
+                    title="Storytelling Model"
+                    form={storytellingModelForm}
+                    configId={activePreset.storytelling_model_config_id}
+                    onConfigChange={(id) =>
+                      updatePreset({ storytelling_model_config_id: id })
+                    }
+                    enabled={activePreset.storytelling_enabled}
+                    onToggle={(enabled) =>
+                      updatePreset({ storytelling_enabled: enabled })
+                    }
+                    onManageTokens={setTokenModalProvider}
+                  />
+
+                  <EmbeddingConfigBlock
+                    title="Embedding"
+                    form={embeddingForm}
+                    configId={activePreset.embedding_config_id}
+                    onConfigChange={(id) =>
+                      updatePreset({ embedding_config_id: id })
+                    }
+                    onManageTokens={setTokenModalProvider}
+                  />
+                </>
+              )}
+            </Stack>
+          </DrawerBody>
+        </DrawerContent>
+      </DrawerRoot>
+
+      <TokenManagementModal
+        open={!!tokenModalProvider}
+        onOpenChange={() => setTokenModalProvider(null)}
+        provider={tokenModalProvider}
+      />
+    </>
   );
 };
-

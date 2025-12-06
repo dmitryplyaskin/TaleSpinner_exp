@@ -1,5 +1,5 @@
 // Provider types
-export type ProviderType = "openrouter" | "ollama";
+export type ProviderType = "openrouter" | "ollama" | "openai_compatible";
 export type ModelType = "llm" | "embedding";
 
 export interface ProviderInfo {
@@ -67,6 +67,8 @@ export interface ModelConfig {
   presence_penalty: number;
   stop_sequences: string[];
   provider_settings: Record<string, unknown>;
+  base_url?: string | null;
+  http_headers?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -85,6 +87,8 @@ export interface ModelConfigCreate {
   presence_penalty?: number;
   stop_sequences?: string[];
   provider_settings?: Record<string, unknown>;
+  base_url?: string | null;
+  http_headers?: Record<string, unknown>;
 }
 
 export interface ModelConfigUpdate {
@@ -101,6 +105,8 @@ export interface ModelConfigUpdate {
   presence_penalty?: number;
   stop_sequences?: string[];
   provider_settings?: Record<string, unknown>;
+  base_url?: string | null;
+  http_headers?: Record<string, unknown>;
 }
 
 // Embedding Config types
@@ -114,6 +120,8 @@ export interface EmbeddingConfig {
   dimensions: number | null;
   batch_size: number;
   provider_settings: Record<string, unknown>;
+  base_url?: string | null;
+  http_headers?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -126,6 +134,8 @@ export interface EmbeddingConfigCreate {
   dimensions?: number;
   batch_size?: number;
   provider_settings?: Record<string, unknown>;
+  base_url?: string | null;
+  http_headers?: Record<string, unknown>;
 }
 
 export interface EmbeddingConfigUpdate {
@@ -136,6 +146,8 @@ export interface EmbeddingConfigUpdate {
   dimensions?: number;
   batch_size?: number;
   provider_settings?: Record<string, unknown>;
+  base_url?: string | null;
+  http_headers?: Record<string, unknown>;
 }
 
 // Preset types

@@ -31,6 +31,8 @@ def create_model_config(
         presence_penalty=payload.presence_penalty,
         stop_sequences=payload.stop_sequences,
         provider_settings=payload.provider_settings,
+        base_url=payload.base_url,
+        http_headers=payload.http_headers,
     )
     session.add(config)
     session.commit()

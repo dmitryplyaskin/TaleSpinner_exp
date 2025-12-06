@@ -48,6 +48,9 @@ class ModelConfigCreate(ModelConfigBase):
 
     provider_settings: dict[str, Any] = Field(default_factory=dict)
 
+    base_url: str | None = None
+    http_headers: dict[str, Any] = Field(default_factory=dict)
+
 
 class ModelConfigUpdate(SQLModel):
     """Schema for updating a model config."""
@@ -69,6 +72,9 @@ class ModelConfigUpdate(SQLModel):
 
     provider_settings: dict[str, Any] | None = None
 
+    base_url: str | None = None
+    http_headers: dict[str, Any] | None = None
+
 
 class ModelConfigRead(ModelConfigBase):
     """Schema for reading a model config."""
@@ -88,6 +94,9 @@ class ModelConfigRead(ModelConfigBase):
     stop_sequences: list[str]
 
     provider_settings: dict[str, Any]
+
+    base_url: str | None
+    http_headers: dict[str, Any]
 
     created_at: datetime
     updated_at: datetime

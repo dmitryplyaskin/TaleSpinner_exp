@@ -38,6 +38,7 @@ async def get_provider_models(
     model_type: ModelType | None = Query(default=None, description="Filter by model type"),
     force_refresh: bool = Query(default=False, description="Force refresh the cache"),
     api_key: str | None = Query(default=None, description="API key for authenticated requests"),
+    base_url: str | None = Query(default=None, description="Base URL for custom providers (OpenAI Compatible)"),
 ):
     """
     Get available models from a provider.
@@ -48,6 +49,7 @@ async def get_provider_models(
     response = await provider_service.get_provider_models(
         provider=provider_id,
         api_key=api_key,
+        base_url=base_url,
         force_refresh=force_refresh,
     )
 
@@ -64,11 +66,13 @@ async def get_provider_models(
 async def refresh_provider_models(
     provider_id: ProviderType,
     api_key: str | None = Query(default=None, description="API key for authenticated requests"),
+    base_url: str | None = Query(default=None, description="Base URL for custom providers"),
 ):
     """Force refresh the models cache for a provider."""
     return await provider_service.get_provider_models(
         provider=provider_id,
         api_key=api_key,
+        base_url=base_url,
         force_refresh=True,
     )
 

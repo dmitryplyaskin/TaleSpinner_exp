@@ -52,6 +52,10 @@ class ModelConfig(SQLModel, table=True):
     # Provider-specific settings (JSON)
     provider_settings: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
 
+    # Advanced provider settings
+    base_url: str | None = Field(default=None, nullable=True)
+    http_headers: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 

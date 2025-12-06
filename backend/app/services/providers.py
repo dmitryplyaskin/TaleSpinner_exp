@@ -26,7 +26,8 @@ class CacheEntry:
 
 
 # In-memory cache for provider models
-_models_cache: dict[ProviderType, CacheEntry] = {}
+# Key is (ProviderType, base_url)
+_models_cache: dict[tuple[ProviderType, str | None], CacheEntry] = {}
 
 
 def get_providers() -> list[ProviderInfo]:
@@ -146,9 +147,56 @@ async def fetch_ollama_models() -> list[ProviderModelInfo]:
     return models
 
 
+async def fetch_openai_compatible_models(base_url: str, api_key: str | None = None) -> list[ProviderModelInfo]:
+    """Fetch models from OpenAI Compatible API."""
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    url = base_url.rstrip("/") + "/models"
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                url,
+                headers=headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.HTTPError:
+        return []
+
+    models: list[ProviderModelInfo] = []
+    for model in data.get("data", []):
+        model_id = model.get("id", "")
+        if not model_id:
+            continue
+
+        # Determine model type
+        # OpenAI models list doesn't explicitly distinguish embeddings vs LLM usually in the same way,
+        # but often embeddings have "embedding" in name.
+        model_type = ModelType.LLM
+        if "embedding" in model_id.lower() or "ada-002" in model_id.lower():
+            model_type = ModelType.EMBEDDING
+
+        models.append(
+            ProviderModelInfo(
+                id=model_id,
+                name=model_id,
+                provider=ProviderType.OPENAI_COMPATIBLE,
+                model_type=model_type,
+                context_length=None,
+                description=None,
+            )
+        )
+    return models
+
+
 async def get_provider_models(
     provider: ProviderType,
     api_key: str | None = None,
+    base_url: str | None = None,
     force_refresh: bool = False,
 ) -> ProviderModelsResponse:
     """
@@ -157,13 +205,15 @@ async def get_provider_models(
     Args:
         provider: The provider to get models for
         api_key: Optional API key for authenticated requests
+        base_url: Optional base URL for custom providers
         force_refresh: Force refresh the cache
 
     Returns:
         ProviderModelsResponse with list of models
     """
     # Check cache
-    cached = _models_cache.get(provider)
+    cache_key = (provider, base_url)
+    cached = _models_cache.get(cache_key)
     if cached and not cached.is_expired() and not force_refresh:
         return ProviderModelsResponse(
             provider=provider,
@@ -178,9 +228,15 @@ async def get_provider_models(
         models = await fetch_openrouter_models(api_key)
     elif provider == ProviderType.OLLAMA:
         models = await fetch_ollama_models()
+    elif provider == ProviderType.OPENAI_COMPATIBLE:
+        if base_url:
+            models = await fetch_openai_compatible_models(base_url, api_key)
+        else:
+            # If no base_url provided for OpenAI Compatible, we can't fetch models
+            models = []
 
     # Update cache
-    _models_cache[provider] = CacheEntry(
+    _models_cache[cache_key] = CacheEntry(
         data=models,
         timestamp=time.time(),
     )
@@ -195,7 +251,10 @@ async def get_provider_models(
 def clear_models_cache(provider: ProviderType | None = None) -> None:
     """Clear the models cache for a provider or all providers."""
     if provider:
-        _models_cache.pop(provider, None)
+        # Clear all entries for this provider (ignoring base_url)
+        keys_to_remove = [k for k in _models_cache.keys() if k[0] == provider]
+        for k in keys_to_remove:
+            _models_cache.pop(k, None)
     else:
         _models_cache.clear()
 

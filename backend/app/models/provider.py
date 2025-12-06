@@ -11,6 +11,7 @@ class ProviderType(str, Enum):
 
     OPENROUTER = "openrouter"
     OLLAMA = "ollama"
+    OPENAI_COMPATIBLE = "openai_compatible"
 
 
 class ModelType(str, Enum):
@@ -38,11 +39,18 @@ PROVIDER_CAPABILITIES: dict[ProviderType, dict] = {
         "models_endpoint": "/models",
     },
     ProviderType.OLLAMA: {
-        "supports_llm": True,
+        "supports_llm": False,
         "supports_embedding": True,
         "requires_api_key": False,
         "base_url": "http://localhost:11434",
         "models_endpoint": "/api/tags",
+    },
+    ProviderType.OPENAI_COMPATIBLE: {
+        "supports_llm": True,
+        "supports_embedding": True,
+        "requires_api_key": False,  # API key might be optional
+        "base_url": None,  # User must provide
+        "models_endpoint": "/models",
     },
 }
 

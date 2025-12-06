@@ -57,3 +57,4 @@ class ModelConfig(SQLModel, table=True):
 
     # Relationships
     user: "User" = Relationship(back_populates="model_configs")
+

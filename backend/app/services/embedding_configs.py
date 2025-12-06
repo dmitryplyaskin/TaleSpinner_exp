@@ -80,3 +80,4 @@ def delete_embedding_config(session: Session, user_id: str, config_id: str) -> N
     config = get_embedding_config(session, user_id, config_id)
     session.delete(config)
     session.commit()
+

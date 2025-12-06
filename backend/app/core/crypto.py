@@ -63,3 +63,4 @@ def decrypt_token(encrypted_token: str) -> str:
 def generate_encryption_key() -> str:
     """Generate a new Fernet encryption key."""
     return Fernet.generate_key().decode()
+

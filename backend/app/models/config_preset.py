@@ -79,3 +79,4 @@ class ConfigPreset(SQLModel, table=True):
 
     # Note: SQLModel doesn't support multiple FKs to same table well in relationships
     # We'll handle model config lookups in the service layer
+

@@ -233,3 +233,4 @@ export const EmbeddingConfigForm = ({
     </VStack>
   );
 };
+

@@ -101,3 +101,4 @@ class StoryWithConfig(StoryRead):
     """Story with its config."""
 
     config: StoryConfigRead | None = None
+

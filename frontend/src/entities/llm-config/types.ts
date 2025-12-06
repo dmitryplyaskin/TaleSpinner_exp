@@ -194,3 +194,4 @@ export interface ConfigPresetUpdate {
   embedding_config_id?: string;
   fallback_strategy?: Partial<FallbackStrategy>;
 }
+

@@ -72,3 +72,4 @@ def delete_token(
     """Delete a token."""
     token_service.delete_token(session, user_id, token_id)
     return None
+

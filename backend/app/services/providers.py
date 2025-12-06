@@ -206,3 +206,4 @@ def filter_models_by_type(
 ) -> list[ProviderModelInfo]:
     """Filter models by type (LLM or Embedding)."""
     return [m for m in models if m.model_type == model_type]
+

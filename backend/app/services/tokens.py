@@ -87,3 +87,4 @@ def get_decrypted_token(session: Session, user_id: str, token_id: str) -> str:
             detail="Token is inactive",
         )
     return decrypt_token(token.encrypted_token)
+

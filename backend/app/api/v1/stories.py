@@ -120,3 +120,4 @@ def reset_story_config(
     """Reset all story configuration overrides."""
     config = story_service.reset_story_config(session, user_id, story_id)
     return StoryConfigRead.model_validate(config)
+

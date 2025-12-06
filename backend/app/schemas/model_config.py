@@ -93,3 +93,4 @@ class ModelConfigRead(ModelConfigBase):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+

@@ -72,3 +72,4 @@ def delete_model_config(
     """Delete a model configuration."""
     config_service.delete_model_config(session, user_id, config_id)
     return None
+

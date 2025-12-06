@@ -177,3 +177,4 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_tokens_user_id'), table_name='tokens')
     op.drop_index(op.f('ix_tokens_id'), table_name='tokens')
     op.drop_table('tokens')
+

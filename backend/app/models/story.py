@@ -91,3 +91,4 @@ class StoryConfig(SQLModel, table=True):
 
     # Relationships
     story: "Story" = Relationship(back_populates="config")
+

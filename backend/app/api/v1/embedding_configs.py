@@ -76,3 +76,4 @@ def delete_embedding_config(
     """Delete an embedding configuration."""
     config_service.delete_embedding_config(session, user_id, config_id)
     return None
+

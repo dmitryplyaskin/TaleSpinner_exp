@@ -121,3 +121,4 @@ def _unset_other_defaults(
     for preset in session.exec(query).all():
         preset.is_default = False
         session.add(preset)
+

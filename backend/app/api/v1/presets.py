@@ -84,3 +84,4 @@ def delete_preset(
     """Delete a preset."""
     preset_service.delete_preset(session, user_id, preset_id)
     return None
+

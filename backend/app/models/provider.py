@@ -45,3 +45,4 @@ PROVIDER_CAPABILITIES: dict[ProviderType, dict] = {
         "models_endpoint": "/api/tags",
     },
 }
+

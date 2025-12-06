@@ -42,3 +42,4 @@ class TokenRead(TokenBase):
 
     # Token value is never exposed
     model_config = {"from_attributes": True}
+

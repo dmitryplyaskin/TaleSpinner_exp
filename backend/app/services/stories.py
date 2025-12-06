@@ -147,3 +147,4 @@ def reset_story_config(session: Session, user_id: str, story_id: str) -> StoryCo
     session.commit()
     session.refresh(config)
     return config
+

@@ -84,3 +84,4 @@ def delete_model_config(session: Session, user_id: str, config_id: str) -> None:
     config = get_model_config(session, user_id, config_id)
     session.delete(config)
     session.commit()
+

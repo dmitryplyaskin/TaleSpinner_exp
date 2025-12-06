@@ -34,3 +34,4 @@ class ProviderModelsResponse(BaseModel):
     provider: ProviderType
     models: list[ProviderModelInfo]
     cached: bool = False
+

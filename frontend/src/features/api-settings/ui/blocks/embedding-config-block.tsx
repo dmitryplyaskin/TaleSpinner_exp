@@ -197,7 +197,11 @@ export const EmbeddingConfigBlock = ({
     return (
       <BlockCard title={title} actions={renderActions()}>
         <Center p={4}>
-          {configId ? <Spinner /> : <Text>Выберите конфигурацию</Text>}
+          {configId ? (
+            <Spinner />
+          ) : (
+            <Text color="fg.muted">Пресет не выбран или не настроен</Text>
+          )}
         </Center>
       </BlockCard>
     );

@@ -32,12 +32,14 @@ export const GlobalPresetBlock = () => {
     $activePreset,
     userModel.$currentUser,
   ]);
-  const [setActive, updatePreset, deletePreset, createPreset] = useUnit([
-    setActivePresetId,
-    presetsModel.editPreset,
-    presetsModel.removePreset,
-    presetsModel.addPreset,
-  ]);
+  const [setActive, updatePreset, deletePreset, createPreset, createDefault] =
+    useUnit([
+      setActivePresetId,
+      presetsModel.editPreset,
+      presetsModel.removePreset,
+      presetsModel.addPreset,
+      presetsModel.addDefaultPreset,
+    ]);
 
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -51,11 +53,10 @@ export const GlobalPresetBlock = () => {
   }, [presets]);
 
   const handleCreate = () => {
-    // Create a default preset - we need at least one model config and embedding config
-    // For simplicity, let's just show a toast for now since we need to create default configs first
+    if (!currentUser) return;
+    createDefault({ userId: currentUser.id });
     toaster.create({
-      title: "Create new preset",
-      description: "Please create model and embedding configs first",
+      title: "Creating default preset...",
       type: "info",
     });
   };
@@ -168,7 +169,7 @@ export const GlobalPresetBlock = () => {
               variant="ghost"
               onClick={handleDelete}
               aria-label="Delete"
-              disabled={!activePreset || presets.length <= 1}
+              disabled={!activePreset}
               title="Delete preset"
             >
               <LuTrash />
@@ -186,6 +187,7 @@ export const GlobalPresetBlock = () => {
           <SelectTrigger>
             <SelectValueText placeholder="Выберите пресет" />
           </SelectTrigger>
+
           <SelectContent>
             {collection.items.map((preset) => (
               <SelectItem key={preset.id} item={preset}>

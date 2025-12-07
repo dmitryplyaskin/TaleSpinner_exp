@@ -8,6 +8,7 @@ import {
   fetchPresets,
   fetchDefaultPreset,
   createPreset,
+  createDefaultPreset,
   updatePreset,
   deletePreset,
 } from "../api/llm-config-api";
@@ -19,6 +20,7 @@ export const addPreset = createEvent<{
   userId: string;
   data: ConfigPresetCreate;
 }>();
+export const addDefaultPreset = createEvent<{ userId: string }>();
 export const editPreset = createEvent<{
   userId: string;
   presetId: string;
@@ -47,6 +49,12 @@ export const createPresetFx = createEffect<
   Error
 >(({ userId, data }) => createPreset(userId, data));
 
+export const createDefaultPresetFx = createEffect<
+  { userId: string },
+  ConfigPreset,
+  Error
+>(({ userId }) => createDefaultPreset(userId));
+
 export const updatePresetFx = createEffect<
   { userId: string; presetId: string; data: ConfigPresetUpdate },
   ConfigPreset,
@@ -62,7 +70,8 @@ export const deletePresetFx = createEffect<
 // Stores
 export const $presets = createStore<ConfigPreset[]>([]);
 export const $presetsLoading = fetchPresetsFx.pending;
-export const $presetSaving = createPresetFx.pending;
+export const $presetSaving =
+  createPresetFx.pending || createDefaultPresetFx.pending;
 export const $presetDeleting = deletePresetFx.pending;
 export const $presetsError = createStore<string | null>(null);
 
@@ -81,6 +90,10 @@ $presets
     }
     return [...state, preset];
   })
+  .on(createDefaultPresetFx.doneData, (state, preset) => {
+    // Default preset creation always returns a default preset
+    return [...state.map((p) => ({ ...p, is_default: false })), preset];
+  })
   .on(updatePresetFx.doneData, (state, updatedPreset) => {
     // If updated preset is now default, unset others
     if (updatedPreset.is_default) {
@@ -96,9 +109,16 @@ $presets
   .reset(resetPresets);
 
 $presetsError
-  .reset([fetchPresetsFx, createPresetFx, updatePresetFx, deletePresetFx])
+  .reset([
+    fetchPresetsFx,
+    createPresetFx,
+    createDefaultPresetFx,
+    updatePresetFx,
+    deletePresetFx,
+  ])
   .on(fetchPresetsFx.failData, (_, error) => error.message)
   .on(createPresetFx.failData, (_, error) => error.message)
+  .on(createDefaultPresetFx.failData, (_, error) => error.message)
   .on(updatePresetFx.failData, (_, error) => error.message)
   .on(deletePresetFx.failData, (_, error) => error.message);
 
@@ -116,6 +136,11 @@ sample({
 sample({
   clock: addPreset,
   target: createPresetFx,
+});
+
+sample({
+  clock: addDefaultPreset,
+  target: createDefaultPresetFx,
 });
 
 sample({

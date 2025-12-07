@@ -40,6 +40,16 @@ def create_preset(
     return ConfigPresetRead.model_validate(preset)
 
 
+@router.post("/initialize-defaults", response_model=ConfigPresetRead, status_code=status.HTTP_201_CREATED)
+def initialize_defaults(
+    session: Session = Depends(get_session),
+    user_id: str = Depends(get_user_id),
+):
+    """Initialize default preset structure (embedding + model + preset)."""
+    preset = preset_service.create_default_preset_structure(session, user_id)
+    return ConfigPresetRead.model_validate(preset)
+
+
 @router.get("/default", response_model=ConfigPresetRead | None)
 def get_default_preset(
     session: Session = Depends(get_session),

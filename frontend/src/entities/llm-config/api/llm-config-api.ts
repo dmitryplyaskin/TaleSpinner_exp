@@ -251,6 +251,15 @@ export const createPreset = async (
   });
 };
 
+export const createDefaultPreset = async (
+  userId: string
+): Promise<ConfigPreset> => {
+  return request<ConfigPreset>("/api/v1/presets/initialize-defaults", {
+    method: "POST",
+    headers: createHeaders(userId),
+  });
+};
+
 export const updatePreset = async (
   userId: string,
   presetId: string,

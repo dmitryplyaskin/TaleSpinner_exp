@@ -10,6 +10,10 @@ from sqlmodel import Session, select
 
 from app.models.config_preset import ConfigPreset
 from app.schemas.config_preset import ConfigPresetCreate, ConfigPresetUpdate
+from app.schemas.embedding_config import EmbeddingConfigCreate
+from app.schemas.model_config import ModelConfigCreate
+from app.models.provider import ProviderType
+from app.services import embedding_configs, model_configs
 
 
 def create_preset(
@@ -107,6 +111,40 @@ def delete_preset(session: Session, user_id: str, preset_id: str) -> None:
     session.commit()
 
 
+def create_default_preset_structure(session: Session, user_id: str) -> ConfigPreset:
+    """Create a default preset structure with necessary model configs."""
+    # 1. Create default embedding config
+    embedding_payload = EmbeddingConfigCreate(
+        name="Default OpenAI Embedding",
+        provider=ProviderType.OPENAI_COMPATIBLE,
+        model_id="text-embedding-3-small",
+        dimensions=1536,
+    )
+    embedding_config = embedding_configs.create_embedding_config(
+        session, user_id, embedding_payload
+    )
+
+    # 2. Create default model config
+    model_payload = ModelConfigCreate(
+        name="Default OpenAI Model",
+        provider=ProviderType.OPENAI_COMPATIBLE,
+        model_id="gpt-4o-mini",
+        temperature=0.7,
+    )
+    model_config = model_configs.create_model_config(session, user_id, model_payload)
+
+    # 3. Create preset linking them
+    preset_payload = ConfigPresetCreate(
+        name="Default Preset",
+        description="Automatically created default configuration",
+        is_default=True,
+        main_model_config_id=model_config.id,
+        embedding_config_id=embedding_config.id,
+    )
+    
+    return create_preset(session, user_id, preset_payload)
+
+
 def _unset_other_defaults(
     session: Session, user_id: str, exclude_id: str | None = None
 ) -> None:
@@ -121,4 +159,6 @@ def _unset_other_defaults(
     for preset in session.exec(query).all():
         preset.is_default = False
         session.add(preset)
+
+
 

@@ -251,7 +251,7 @@ export const ModelConfigBlock = ({
             <SelectTrigger>
               <SelectValueText placeholder="Выберите конфигурацию" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent portalled={false}>
               {configCollection.items.map((item) => (
                 <SelectItem key={item.id} item={item}>
                   {item.name}

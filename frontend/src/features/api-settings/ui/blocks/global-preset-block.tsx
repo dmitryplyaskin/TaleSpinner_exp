@@ -188,7 +188,7 @@ export const GlobalPresetBlock = () => {
             <SelectValueText placeholder="Выберите пресет" />
           </SelectTrigger>
 
-          <SelectContent>
+          <SelectContent portalled={false}>
             {collection.items.map((preset) => (
               <SelectItem key={preset.id} item={preset}>
                 {preset.name}

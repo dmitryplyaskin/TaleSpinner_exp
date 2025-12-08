@@ -6,6 +6,7 @@ interface ConfirmDialogProps {
   title: string;
   message: string;
   onConfirm: () => void;
+  onCancel?: () => void;
   confirmText?: string;
   cancelText?: string;
   colorPalette?: string;
@@ -17,12 +18,18 @@ export const ConfirmDialog = ({
   title,
   message,
   onConfirm,
+  onCancel,
   confirmText = "Confirm",
   cancelText = "Cancel",
   colorPalette = "red",
 }: ConfirmDialogProps) => {
   const handleConfirm = () => {
     onConfirm();
+    onOpenChange(false);
+  };
+
+  const handleCancel = () => {
+    onCancel?.();
     onOpenChange(false);
   };
 
@@ -40,7 +47,7 @@ export const ConfirmDialog = ({
           </Dialog.Body>
           <Dialog.Footer>
             <HStack justify="flex-end" gap={2}>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={handleCancel}>
                 {cancelText}
               </Button>
               <Button colorPalette={colorPalette} onClick={handleConfirm}>
@@ -53,4 +60,3 @@ export const ConfirmDialog = ({
     </Dialog.Root>
   );
 };
-

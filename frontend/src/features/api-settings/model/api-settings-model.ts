@@ -19,6 +19,7 @@ export const closeApiSettings = createEvent();
 export const initApiSettings = createEvent<string>(); // userId
 export const setActivePresetId = createEvent<string>();
 export const updateActivePreset = createEvent<ConfigPresetUpdate>(); // Updates current preset fields
+export const resetAllForms = createEvent(); // Reset all forms
 
 // Stores
 export const $isOpen = createStore(false)
@@ -272,98 +273,130 @@ sample({
   }
 );
 
-// Wire save effects to update preset
+// Track unsaved changes across all forms
+export const $hasUnsavedChanges = combine(
+  mainModelForm.$isDirty,
+  ragModelForm.$isDirty,
+  guardModelForm.$isDirty,
+  storytellingModelForm.$isDirty,
+  embeddingForm.$isDirty,
+  (mainDirty, ragDirty, guardDirty, storytellingDirty, embeddingDirty) => {
+    return (
+      mainDirty || ragDirty || guardDirty || storytellingDirty || embeddingDirty
+    );
+  }
+);
+
+// Event to trigger save for all dirty forms
+export const saveAllForms = createEvent();
+
+// Wire save effects to update preset (only when saveAllForms is triggered)
 sample({
-  clock: mainModelForm.saveTriggered,
+  clock: saveAllForms,
   source: {
     userId: userModel.$currentUser,
     presetId: $activePresetId,
     preset: $activePreset,
-    config: mainModelForm.$config,
+    mainConfig: mainModelForm.$config,
+    mainDirty: mainModelForm.$isDirty,
   },
-  filter: ({ userId, presetId, preset, config }) =>
-    !!userId && !!presetId && !!preset && !!config,
-  fn: ({ userId, presetId, preset, config }) => ({
+  filter: ({ userId, presetId, preset, mainConfig, mainDirty }) =>
+    !!userId && !!presetId && !!preset && !!mainConfig && mainDirty,
+  fn: ({ userId, presetId, preset, mainConfig }) => ({
     userId: userId!.id,
     presetId: presetId!,
     currentConfigData: preset!.config_data,
-    updatedConfig: config!,
+    updatedConfig: mainConfig!,
   }),
   target: mainModelForm.saveEffect,
 });
 
 sample({
-  clock: ragModelForm.saveTriggered,
+  clock: saveAllForms,
   source: {
     userId: userModel.$currentUser,
     presetId: $activePresetId,
     preset: $activePreset,
-    config: ragModelForm.$config,
+    ragConfig: ragModelForm.$config,
+    ragDirty: ragModelForm.$isDirty,
   },
-  filter: ({ userId, presetId, preset, config }) =>
-    !!userId && !!presetId && !!preset && !!config,
-  fn: ({ userId, presetId, preset, config }) => ({
+  filter: ({ userId, presetId, preset, ragConfig, ragDirty }) =>
+    !!userId && !!presetId && !!preset && !!ragConfig && ragDirty,
+  fn: ({ userId, presetId, preset, ragConfig }) => ({
     userId: userId!.id,
     presetId: presetId!,
     currentConfigData: preset!.config_data,
-    updatedConfig: config!,
+    updatedConfig: ragConfig!,
   }),
   target: ragModelForm.saveEffect,
 });
 
 sample({
-  clock: guardModelForm.saveTriggered,
+  clock: saveAllForms,
   source: {
     userId: userModel.$currentUser,
     presetId: $activePresetId,
     preset: $activePreset,
-    config: guardModelForm.$config,
+    guardConfig: guardModelForm.$config,
+    guardDirty: guardModelForm.$isDirty,
   },
-  filter: ({ userId, presetId, preset, config }) =>
-    !!userId && !!presetId && !!preset && !!config,
-  fn: ({ userId, presetId, preset, config }) => ({
+  filter: ({ userId, presetId, preset, guardConfig, guardDirty }) =>
+    !!userId && !!presetId && !!preset && !!guardConfig && guardDirty,
+  fn: ({ userId, presetId, preset, guardConfig }) => ({
     userId: userId!.id,
     presetId: presetId!,
     currentConfigData: preset!.config_data,
-    updatedConfig: config!,
+    updatedConfig: guardConfig!,
   }),
   target: guardModelForm.saveEffect,
 });
 
 sample({
-  clock: storytellingModelForm.saveTriggered,
+  clock: saveAllForms,
   source: {
     userId: userModel.$currentUser,
     presetId: $activePresetId,
     preset: $activePreset,
-    config: storytellingModelForm.$config,
+    storytellingConfig: storytellingModelForm.$config,
+    storytellingDirty: storytellingModelForm.$isDirty,
   },
-  filter: ({ userId, presetId, preset, config }) =>
-    !!userId && !!presetId && !!preset && !!config,
-  fn: ({ userId, presetId, preset, config }) => ({
+  filter: ({
+    userId,
+    presetId,
+    preset,
+    storytellingConfig,
+    storytellingDirty,
+  }) =>
+    !!userId &&
+    !!presetId &&
+    !!preset &&
+    !!storytellingConfig &&
+    storytellingDirty,
+  fn: ({ userId, presetId, preset, storytellingConfig }) => ({
     userId: userId!.id,
     presetId: presetId!,
     currentConfigData: preset!.config_data,
-    updatedConfig: config!,
+    updatedConfig: storytellingConfig!,
   }),
   target: storytellingModelForm.saveEffect,
 });
 
 sample({
-  clock: embeddingForm.saveTriggered,
+  clock: saveAllForms,
   source: {
     userId: userModel.$currentUser,
     presetId: $activePresetId,
     preset: $activePreset,
-    config: embeddingForm.$config,
+    embeddingConfig: embeddingForm.$config,
+    embeddingDirty: embeddingForm.$isDirty,
   },
-  filter: ({ userId, presetId, preset, config }) =>
-    !!userId && !!presetId && !!preset && !!config,
-  fn: ({ userId, presetId, preset, config }) => ({
+  filter: ({ userId, presetId, preset, embeddingConfig, embeddingDirty }) =>
+    !!userId && !!presetId && !!preset && !!embeddingConfig && embeddingDirty,
+  fn: ({ userId, presetId, preset, embeddingConfig }) => ({
     userId: userId!.id,
     presetId: presetId!,
     currentConfigData: preset!.config_data,
-    updatedConfig: config!,
+    updatedConfig: embeddingConfig!,
   }),
   target: embeddingForm.saveEffect,
 });
@@ -409,6 +442,18 @@ sample({
     storytellingModelForm.init(storytellingConfig);
   }
   if (embeddingConfig) embeddingForm.init(embeddingConfig);
+});
+
+// Reset all forms
+sample({
+  clock: resetAllForms,
+  target: [
+    mainModelForm.resetTriggered,
+    ragModelForm.resetTriggered,
+    guardModelForm.resetTriggered,
+    storytellingModelForm.resetTriggered,
+    embeddingForm.resetTriggered,
+  ],
 });
 
 // Clear data on close

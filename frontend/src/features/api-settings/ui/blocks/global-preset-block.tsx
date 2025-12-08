@@ -1,6 +1,6 @@
 import { useUnit } from "effector-react";
 import { useMemo, useState, useEffect } from "react";
-import { IconButton, HStack } from "@chakra-ui/react";
+import { IconButton, HStack, Alert, VStack } from "@chakra-ui/react";
 import { LuPlus, LuSave, LuCopy, LuTrash, LuPencil } from "react-icons/lu";
 import { createListCollection } from "@chakra-ui/react";
 
@@ -18,7 +18,10 @@ import { toaster } from "@/components/ui/toaster";
 import {
   $activePresetId,
   $activePreset,
+  $hasUnsavedChanges,
   setActivePresetId,
+  saveAllForms,
+  resetAllForms,
 } from "../../model/api-settings-model";
 import { BlockCard } from "../parts/block-card";
 import { RenameDialog } from "../modals/rename-dialog";
@@ -26,23 +29,36 @@ import { ConfirmDialog } from "../modals/confirm-dialog";
 import { userModel } from "@/entities/user";
 
 export const GlobalPresetBlock = () => {
-  const [presets, activeId, activePreset, currentUser] = useUnit([
-    presetsModel.$presets,
-    $activePresetId,
-    $activePreset,
-    userModel.$currentUser,
-  ]);
-  const [setActive, updatePreset, deletePreset, createPreset, createDefault] =
+  const [presets, activeId, activePreset, currentUser, hasUnsavedChanges] =
     useUnit([
-      setActivePresetId,
-      presetsModel.editPreset,
-      presetsModel.removePreset,
-      presetsModel.addPreset,
-      presetsModel.addDefaultPreset,
+      presetsModel.$presets,
+      $activePresetId,
+      $activePreset,
+      userModel.$currentUser,
+      $hasUnsavedChanges,
     ]);
+  const [
+    setActive,
+    updatePreset,
+    deletePreset,
+    createPreset,
+    createDefault,
+    saveAll,
+    resetAll,
+  ] = useUnit([
+    setActivePresetId,
+    presetsModel.editPreset,
+    presetsModel.removePreset,
+    presetsModel.addPreset,
+    presetsModel.addDefaultPreset,
+    saveAllForms,
+    resetAllForms,
+  ]);
 
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [switchPresetOpen, setSwitchPresetOpen] = useState(false);
+  const [pendingPresetId, setPendingPresetId] = useState<string | null>(null);
   const [pendingDuplicateName, setPendingDuplicateName] = useState<
     string | null
   >(null);
@@ -78,11 +94,43 @@ export const GlobalPresetBlock = () => {
   };
 
   const handleSave = () => {
-    // Save is automatic on field changes, this button could trigger a manual save if needed
+    if (!hasUnsavedChanges) {
+      toaster.create({
+        title: "Нет изменений для сохранения",
+        type: "info",
+      });
+      return;
+    }
+
+    saveAll();
     toaster.create({
-      title: "Changes are saved automatically",
-      type: "success",
+      title: "Сохранение изменений...",
+      type: "info",
     });
+  };
+
+  const handlePresetSwitch = (newPresetId: string) => {
+    if (hasUnsavedChanges) {
+      setPendingPresetId(newPresetId);
+      setSwitchPresetOpen(true);
+    } else {
+      setActive(newPresetId);
+    }
+  };
+
+  const handleSwitchConfirm = () => {
+    if (pendingPresetId) {
+      // Reset all forms before switching
+      resetAll();
+      setActive(pendingPresetId);
+      setPendingPresetId(null);
+      setSwitchPresetOpen(false);
+    }
+  };
+
+  const handleSwitchCancel = () => {
+    setPendingPresetId(null);
+    setSwitchPresetOpen(false);
   };
 
   const handleRename = () => {
@@ -148,8 +196,10 @@ export const GlobalPresetBlock = () => {
               size="xs"
               variant="ghost"
               onClick={handleSave}
+              disabled={!hasUnsavedChanges}
+              colorPalette={hasUnsavedChanges ? "blue" : undefined}
               aria-label="Save"
-              title="Save (auto-saved)"
+              title="Сохранить изменения"
             >
               <LuSave />
             </IconButton>
@@ -190,25 +240,37 @@ export const GlobalPresetBlock = () => {
           </HStack>
         }
       >
-        <SelectRoot
-          collection={collection}
-          value={activeId ? [activeId] : []}
-          onValueChange={(e) => setActive(e.value[0])}
-          size="sm"
-        >
-          <SelectLabel>Пресет</SelectLabel>
-          <SelectTrigger>
-            <SelectValueText placeholder="Выберите пресет" />
-          </SelectTrigger>
+        <VStack gap={3} align="stretch">
+          <SelectRoot
+            collection={collection}
+            value={activeId ? [activeId] : []}
+            onValueChange={(e) => handlePresetSwitch(e.value[0])}
+            size="sm"
+          >
+            <SelectLabel>Пресет</SelectLabel>
+            <SelectTrigger>
+              <SelectValueText placeholder="Выберите пресет" />
+            </SelectTrigger>
 
-          <SelectContent portalled={false}>
-            {collection.items.map((preset) => (
-              <SelectItem key={preset.id} item={preset}>
-                {preset.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </SelectRoot>
+            <SelectContent portalled={false}>
+              {collection.items.map((preset) => (
+                <SelectItem key={preset.id} item={preset}>
+                  {preset.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </SelectRoot>
+
+          {hasUnsavedChanges && (
+            <Alert.Root status="warning" variant="subtle">
+              <Alert.Indicator />
+              <Alert.Title>
+                Пресет требует сохранения, иначе данные будут утеряны после
+                перезагрузки или смены пресета
+              </Alert.Title>
+            </Alert.Root>
+          )}
+        </VStack>
       </BlockCard>
 
       {activePreset && (
@@ -229,6 +291,18 @@ export const GlobalPresetBlock = () => {
             onConfirm={handleDeleteConfirm}
             confirmText="Delete"
             colorPalette="red"
+          />
+
+          <ConfirmDialog
+            open={switchPresetOpen}
+            onOpenChange={setSwitchPresetOpen}
+            title="Несохраненные изменения"
+            message="У вас есть несохраненные изменения. При смене пресета они будут утеряны. Продолжить?"
+            onConfirm={handleSwitchConfirm}
+            onCancel={handleSwitchCancel}
+            confirmText="Продолжить"
+            cancelText="Отмена"
+            colorPalette="orange"
           />
         </>
       )}

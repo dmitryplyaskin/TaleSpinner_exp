@@ -17,11 +17,15 @@ import { GlobalPresetBlock } from "./blocks/global-preset-block";
 import { ModelConfigBlock } from "./blocks/model-config-block";
 import { EmbeddingConfigBlock } from "./blocks/embedding-config-block";
 import { TokenManagementModal } from "./modals/token-management-modal";
+import { ConfirmDialog } from "./modals/confirm-dialog";
 
 import {
   initApiSettings,
   $activePreset,
+  $hasUnsavedChanges,
   updateActivePreset,
+  closeApiSettings,
+  resetAllForms,
   mainModelForm,
   ragModelForm,
   guardModelForm,
@@ -38,15 +42,20 @@ export const ApiSettingsDrawer = ({
   open,
   onOpenChange,
 }: ApiSettingsDrawerProps) => {
-  const [currentUser, init] = useUnit([
-    userModel.$currentUser,
-    initApiSettings,
-  ]);
+  const [currentUser, init, hasUnsavedChanges, closeSettings, resetAll] =
+    useUnit([
+      userModel.$currentUser,
+      initApiSettings,
+      $hasUnsavedChanges,
+      closeApiSettings,
+      resetAllForms,
+    ]);
   const activePreset = useUnit($activePreset);
   const updatePreset = useUnit(updateActivePreset);
 
   const [tokenModalProvider, setTokenModalProvider] =
     useState<ProviderType | null>(null);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (open && currentUser) {
@@ -54,13 +63,36 @@ export const ApiSettingsDrawer = ({
     }
   }, [open, currentUser, init]);
 
+  const handleOpenChange = (details: { open: boolean }) => {
+    if (!details.open && hasUnsavedChanges) {
+      // Prevent closing and show confirmation
+      setCloseConfirmOpen(true);
+    } else {
+      onOpenChange(details);
+      if (!details.open) {
+        closeSettings();
+      }
+    }
+  };
+
+  const handleCloseConfirm = () => {
+    resetAll();
+    setCloseConfirmOpen(false);
+    onOpenChange({ open: false });
+    closeSettings();
+  };
+
+  const handleCloseCancel = () => {
+    setCloseConfirmOpen(false);
+  };
+
   if (!currentUser) return null;
 
   return (
     <>
       <DrawerRoot
         open={open}
-        onOpenChange={onOpenChange}
+        onOpenChange={handleOpenChange}
         placement="start"
         size="lg"
       >
@@ -171,6 +203,18 @@ export const ApiSettingsDrawer = ({
         open={!!tokenModalProvider}
         onOpenChange={() => setTokenModalProvider(null)}
         provider={tokenModalProvider}
+      />
+
+      <ConfirmDialog
+        open={closeConfirmOpen}
+        onOpenChange={setCloseConfirmOpen}
+        title="Несохраненные изменения"
+        message="У вас есть несохраненные изменения. При закрытии они будут утеряны. Продолжить?"
+        onConfirm={handleCloseConfirm}
+        onCancel={handleCloseCancel}
+        confirmText="Закрыть без сохранения"
+        cancelText="Отмена"
+        colorPalette="orange"
       />
     </>
   );

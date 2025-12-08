@@ -85,12 +85,18 @@ export const ApiSettingsDrawer = ({
                 enabled={activePreset?.config_data.rag.enabled ?? false}
                 onToggle={(enabled) => {
                   if (!activePreset) return;
+                  const currentRagConfig = activePreset.config_data.rag;
+                  // Keep existing config if it exists and has valid model_id, otherwise set to null
+                  const newConfig =
+                    enabled && currentRagConfig.config?.model_id
+                      ? currentRagConfig.config
+                      : null;
                   updatePreset({
                     config_data: {
                       ...activePreset.config_data,
                       rag: {
-                        ...activePreset.config_data.rag,
                         enabled,
+                        config: newConfig,
                       },
                     },
                   });
@@ -104,12 +110,18 @@ export const ApiSettingsDrawer = ({
                 enabled={activePreset?.config_data.guard.enabled ?? false}
                 onToggle={(enabled) => {
                   if (!activePreset) return;
+                  const currentGuardConfig = activePreset.config_data.guard;
+                  // Keep existing config if it exists and has valid model_id, otherwise set to null
+                  const newConfig =
+                    enabled && currentGuardConfig.config?.model_id
+                      ? currentGuardConfig.config
+                      : null;
                   updatePreset({
                     config_data: {
                       ...activePreset.config_data,
                       guard: {
-                        ...activePreset.config_data.guard,
                         enabled,
+                        config: newConfig,
                       },
                     },
                   });
@@ -125,12 +137,19 @@ export const ApiSettingsDrawer = ({
                 }
                 onToggle={(enabled) => {
                   if (!activePreset) return;
+                  const currentStorytellingConfig =
+                    activePreset.config_data.storytelling;
+                  // Keep existing config if it exists and has valid model_id, otherwise set to null
+                  const newConfig =
+                    enabled && currentStorytellingConfig.config?.model_id
+                      ? currentStorytellingConfig.config
+                      : null;
                   updatePreset({
                     config_data: {
                       ...activePreset.config_data,
                       storytelling: {
-                        ...activePreset.config_data.storytelling,
                         enabled,
+                        config: newConfig,
                       },
                     },
                   });

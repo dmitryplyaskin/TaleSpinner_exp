@@ -85,7 +85,9 @@ export const ModelConfigBlock = ({
     );
   }
 
-  if (!config || !activePreset) {
+  // For optional blocks (with onToggle), show form even if config is null
+  // For main model (without onToggle), require both config and activePreset
+  if (!activePreset) {
     return (
       <BlockCard title={title} actions={renderActions()}>
         <Center p={4}>
@@ -95,21 +97,41 @@ export const ModelConfigBlock = ({
     );
   }
 
+  // If config is null but block is enabled (optional block), use default values for display
+  const displayConfig = config || {
+    provider: "openrouter" as const,
+    model_id: "",
+    token_ids: [],
+    token_selection_strategy: "failover" as const,
+    sampler_settings: {
+      temperature: 0.7,
+      top_p: 1.0,
+      top_k: null,
+      max_tokens: 4096,
+      frequency_penalty: 0.0,
+      presence_penalty: 0.0,
+      stop_sequences: [],
+    },
+    provider_settings: {},
+    base_url: null,
+    http_headers: {},
+  };
+
   return (
     <BlockCard title={title} actions={renderActions()}>
       <Stack gap={4}>
         {/* Provider */}
         <ProviderSelect
-          value={config.provider}
+          value={displayConfig.provider}
           onChange={(p) => fieldChanged({ key: "provider", value: p })}
           filter={(p) => p.supports_llm}
         />
 
         {/* Connection Settings for OpenAI Compatible */}
-        {config.provider === "openai_compatible" && (
+        {displayConfig.provider === "openai_compatible" && (
           <ConnectionSettings
-            baseUrl={config.base_url}
-            headers={config.http_headers}
+            baseUrl={displayConfig.base_url}
+            headers={displayConfig.http_headers}
             onBaseUrlChange={(v) => fieldChanged({ key: "base_url", value: v })}
             onHeadersChange={(v) =>
               fieldChanged({ key: "http_headers", value: v })
@@ -119,34 +141,34 @@ export const ModelConfigBlock = ({
 
         {/* Model Select */}
         <ModelSelect
-          provider={config.provider}
-          baseUrl={config.base_url}
-          value={config.model_id}
+          provider={displayConfig.provider}
+          baseUrl={displayConfig.base_url}
+          value={displayConfig.model_id}
           onChange={(v) => fieldChanged({ key: "model_id", value: v })}
         />
 
         {/* Token */}
         <TokenSelect
-          provider={config.provider}
-          value={config.token_ids}
+          provider={displayConfig.provider}
+          value={displayConfig.token_ids}
           onChange={(v) => fieldChanged({ key: "token_ids", value: v })}
           onManageTokens={() =>
-            config.provider && onManageTokens?.(config.provider)
+            displayConfig.provider && onManageTokens?.(displayConfig.provider)
           }
         />
 
         {/* Samplers */}
         <SamplerSettings
-          temperature={config.sampler_settings.temperature}
-          topP={config.sampler_settings.top_p}
-          maxTokens={config.sampler_settings.max_tokens}
-          frequencyPenalty={config.sampler_settings.frequency_penalty}
-          presencePenalty={config.sampler_settings.presence_penalty}
+          temperature={displayConfig.sampler_settings.temperature}
+          topP={displayConfig.sampler_settings.top_p}
+          maxTokens={displayConfig.sampler_settings.max_tokens}
+          frequencyPenalty={displayConfig.sampler_settings.frequency_penalty}
+          presencePenalty={displayConfig.sampler_settings.presence_penalty}
           onChange={(k, v) => {
             fieldChanged({
               key: "sampler_settings",
               value: {
-                ...config.sampler_settings,
+                ...displayConfig.sampler_settings,
                 [k]: v,
               },
             });

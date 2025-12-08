@@ -1,5 +1,5 @@
 import { useUnit } from "effector-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { IconButton, HStack } from "@chakra-ui/react";
 import { LuPlus, LuSave, LuCopy, LuTrash, LuPencil } from "react-icons/lu";
 import { createListCollection } from "@chakra-ui/react";
@@ -43,6 +43,9 @@ export const GlobalPresetBlock = () => {
 
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pendingDuplicateName, setPendingDuplicateName] = useState<
+    string | null
+  >(null);
 
   const collection = useMemo(() => {
     return createListCollection({
@@ -51,6 +54,19 @@ export const GlobalPresetBlock = () => {
       itemToValue: (item) => item.id,
     });
   }, [presets]);
+
+  // Select duplicated preset after creation
+  useEffect(() => {
+    if (pendingDuplicateName && presets.length > 0) {
+      const duplicatedPreset = presets.find(
+        (p) => p.name === pendingDuplicateName
+      );
+      if (duplicatedPreset) {
+        setActive(duplicatedPreset.id);
+        setPendingDuplicateName(null);
+      }
+    }
+  }, [presets, pendingDuplicateName, setActive]);
 
   const handleCreate = () => {
     if (!currentUser) return;
@@ -89,6 +105,7 @@ export const GlobalPresetBlock = () => {
 
     // Create a copy with a new name
     const newName = `${activePreset.name} (Copy)`;
+    setPendingDuplicateName(newName);
     createPreset({
       userId: currentUser.id,
       data: {
@@ -161,8 +178,12 @@ export const GlobalPresetBlock = () => {
               variant="ghost"
               onClick={handleDelete}
               aria-label="Delete"
-              disabled={!activePreset}
-              title="Delete preset"
+              disabled={!activePreset || presets.length <= 1}
+              title={
+                presets.length <= 1
+                  ? "Cannot delete the last preset"
+                  : "Delete preset"
+              }
             >
               <LuTrash />
             </IconButton>

@@ -191,6 +191,22 @@ sample({
   target: setActivePresetId,
 });
 
+// Select last available preset after deletion if deleted preset was active
+sample({
+  clock: presetsModel.deletePresetFx.done,
+  source: { activePresetId: $activePresetId, presets: presetsModel.$presets },
+  filter: ({ activePresetId, presets }, { params }) => {
+    // Only select new preset if deleted preset was active and there are presets left
+    return activePresetId === params.presetId && presets.length > 0;
+  },
+  fn: ({ presets }) => {
+    // Select default preset if exists, otherwise select last available
+    const def = presets.find((p) => p.is_default);
+    return def ? def.id : presets[presets.length - 1].id;
+  },
+  target: setActivePresetId,
+});
+
 $activePresetId.on(setActivePresetId, (_, id) => id);
 
 // Handle Preset Updates
@@ -236,13 +252,22 @@ sample({
     embeddingConfig,
   }) => {
     if (mainConfig) mainModelForm.init(mainConfig);
-    // RAG, Guard, Storytelling forms only init if config exists and is enabled
-    if (ragConfig && preset.config_data.rag.enabled)
-      ragModelForm.init(ragConfig);
-    if (guardConfig && preset.config_data.guard.enabled)
-      guardModelForm.init(guardConfig);
-    if (storytellingConfig && preset.config_data.storytelling.enabled)
-      storytellingModelForm.init(storytellingConfig);
+    // RAG, Guard, Storytelling forms init if enabled (even if config is null, it will be created on first save)
+    if (preset.config_data.rag.enabled) {
+      if (ragConfig) {
+        ragModelForm.init(ragConfig);
+      }
+    }
+    if (preset.config_data.guard.enabled) {
+      if (guardConfig) {
+        guardModelForm.init(guardConfig);
+      }
+    }
+    if (preset.config_data.storytelling.enabled) {
+      if (storytellingConfig) {
+        storytellingModelForm.init(storytellingConfig);
+      }
+    }
     if (embeddingConfig) embeddingForm.init(embeddingConfig);
   }
 );
@@ -373,11 +398,16 @@ sample({
   const embeddingConfig = getEmbeddingConfig(preset);
 
   if (mainConfig) mainModelForm.init(mainConfig);
-  if (ragConfig && preset.config_data.rag.enabled) ragModelForm.init(ragConfig);
-  if (guardConfig && preset.config_data.guard.enabled)
+  // RAG, Guard, Storytelling forms init if enabled (even if config is null, it will be created on first save)
+  if (preset.config_data.rag.enabled && ragConfig) {
+    ragModelForm.init(ragConfig);
+  }
+  if (preset.config_data.guard.enabled && guardConfig) {
     guardModelForm.init(guardConfig);
-  if (storytellingConfig && preset.config_data.storytelling.enabled)
+  }
+  if (preset.config_data.storytelling.enabled && storytellingConfig) {
     storytellingModelForm.init(storytellingConfig);
+  }
   if (embeddingConfig) embeddingForm.init(embeddingConfig);
 });
 

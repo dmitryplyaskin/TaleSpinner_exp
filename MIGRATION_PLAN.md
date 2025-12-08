@@ -29,108 +29,135 @@
 
 ---
 
-## Фаза 1: Backend (Python / SQLModel)
+## Фаза 1: Backend (Python / SQLModel) ✅ ВЫПОЛНЕНО
 
-### 1. Удаление устаревших моделей и API
+### 1. Удаление устаревших моделей и API ✅
 
-- [ ] **Удалить файлы моделей:**
-  - `backend/app/models/model_config.py`
-  - `backend/app/models/embedding_config.py`
-- [ ] **Удалить файлы схем (Pydantic):**
-  - `backend/app/schemas/model_config.py`
-  - `backend/app/schemas/embedding_config.py`
-- [ ] **Удалить API эндпоинты:**
-  - `backend/app/api/v1/model_configs.py`
-  - `backend/app/api/v1/embedding_configs.py`
-- [ ] **Очистить `backend/app/api/v1/__init__.py`** от импортов удаленных роутеров.
+- [x] **Удалить файлы моделей:**
+  - `backend/app/models/model_config.py` ✅
+  - `backend/app/models/embedding_config.py` ✅
+- [x] **Удалить файлы схем (Pydantic):**
+  - `backend/app/schemas/model_config.py` ✅
+  - `backend/app/schemas/embedding_config.py` ✅
+- [x] **Удалить API эндпоинты:**
+  - `backend/app/api/v1/model_configs.py` ✅
+  - `backend/app/api/v1/embedding_configs.py` ✅
+- [x] **Очистить импорты:** ✅
+  - Обновлен `backend/app/main.py` - удалена регистрация роутеров
+  - Обновлен `backend/app/models/__init__.py` - удалены экспорты
+  - Обновлен `backend/app/schemas/__init__.py` - удалены экспорты
+  - Обновлен `backend/app/models/user.py` - удалены relationships
+  - Удалены сервисы `model_configs.py` и `embedding_configs.py`
 
-### 2. Обновление ConfigPreset (Model & Schema)
+### 2. Обновление ConfigPreset (Model & Schema) ✅
 
-- [ ] **Обновить `backend/app/models/config_preset.py`:**
+- [x] **Обновить `backend/app/models/config_preset.py`:** ✅
 
-  - Удалить поля-внешние ключи: `main_model_config_id`, `rag_model_config_id`, `embedding_config_id`, `guard_model_config_id`, `storytelling_model_config_id` и соответствующие флаги `*_enabled` (флаги можно перенести внутрь JSON, если удобно, или оставить на уровне корня, но лучше сгруппировать в JSON).
-  - Удалить старые связи (`relationship`).
-  - Добавить новое поле:
-    ```python
-    config_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    ```
-    _Примечание: Структура JSON должна включать секции `main_model`, `rag`, `guard`, `storytelling`, `embedding`._
+  - Удалены поля-внешние ключи: `main_model_config_id`, `rag_model_config_id`, `embedding_config_id`, `guard_model_config_id`, `storytelling_model_config_id` ✅
+  - Удалены флаги: `rag_enabled`, `guard_enabled`, `storytelling_enabled` (перенесены внутрь JSON) ✅
+  - Добавлено поле: `config_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))` ✅
+  - Удалены TYPE_CHECKING импорты для удаленных моделей ✅
 
-- [ ] **Обновить `backend/app/schemas/config_preset.py`:**
+- [x] **Обновить `backend/app/schemas/config_preset.py`:** ✅
 
-  - Определить Pydantic модели для вложенных конфигураций (можно переиспользовать логику из удаленных схем `ModelConfigBase`, но без ID и полей БД).
-  - Примерная структура:
+  - Созданы Pydantic модели для структуры config_data: ✅
+    - `SamplerSettings` - настройки сэмплера (temperature, top_p, max_tokens и т.д.)
+    - `LLMConfig` - базовая конфигурация LLM (provider, model_id, token_ids, sampler_settings и т.д.)
+    - `RAGConfig` - конфигурация RAG (enabled, config: LLMConfig)
+    - `GuardConfig` - конфигурация Guard (enabled, config: LLMConfig)
+    - `StorytellingConfig` - конфигурация Storytelling (enabled, config: LLMConfig)
+    - `EmbeddingConfigData` - конфигурация Embedding (provider, model_id, token_ids, dimensions, batch_size и т.д.)
+    - `GlobalConfigSchema` - объединяющая модель со всеми секциями
+  - Обновлены схемы: ✅
+    - `ConfigPresetCreate` - использует `config_data: GlobalConfigSchema`
+    - `ConfigPresetUpdate` - использует `config_data: GlobalConfigSchema | None`
+    - `ConfigPresetRead` - использует `config_data: dict[str, Any]`
 
-    ```python
-    class LLMConfig(BaseModel):
-        provider: str
-        model_id: str
-        parameters: dict  # temp, top_p, etc
-        token_ids: list[str]
+### 3. Обновление логики сервиса Presets ✅
 
-    class RAGConfig(BaseModel):
-        enabled: bool
-        config: LLMConfig
+- [x] **Обновить `backend/app/services/presets.py`:** ✅
+  - Удалены импорты `EmbeddingConfigCreate`, `ModelConfigCreate`, `embedding_configs`, `model_configs` ✅
+  - Обновлена функция `create_preset` - работает с `config_data` напрямую ✅
+  - Обновлена функция `update_preset` - обрабатывает `config_data` как Pydantic модель или dict ✅
+  - Обновлена функция `create_default_preset_structure` - создает пресет с валидным JSON в `config_data` вместо создания отдельных конфигов ✅
+  - Валидация JSON структуры происходит через Pydantic схемы (`GlobalConfigSchema`) при входе в API ✅
 
-    class ConfigPresetCreate(ConfigPresetBase):
-        config_data: GlobalConfigSchema # Модель, объединяющая всё выше
-    ```
+### 4. Миграция БД ✅
 
-### 3. Обновление логики сервиса Presets
-
-- [ ] **Обновить `backend/app/services/presets.py` (или где лежит логика):**
-  - Убрать логику проверки существования `model_config_id` при создании пресета.
-  - Убедиться, что валидация JSON структуры происходит через Pydantic схемы при входе в API.
-
-### 4. Миграция БД
-
-- [ ] **Создать новую миграцию Alembic:**
-  - Поскольку данные не важны: `alembic revision --autogenerate -m "refactor_presets_json"`
-  - Убедиться, что миграция удаляет таблицы `model_configs`, `embedding_configs` и изменяет `config_presets`.
-  - Применить миграцию: `alembic upgrade head`.
+- [x] **Создана миграция Alembic:** ✅
+  - Файл: `backend/alembic/versions/refactor_presets_json.py`
+  - Миграция удаляет внешние ключи из `config_presets` ✅
+  - Удаляет колонки: `main_model_config_id`, `rag_model_config_id`, `guard_model_config_id`, `storytelling_model_config_id`, `embedding_config_id`, `rag_enabled`, `guard_enabled`, `storytelling_enabled` ✅
+  - Добавляет колонку `config_data` (JSON) ✅
+  - Удаляет таблицы `model_configs` и `embedding_configs` ✅
+  - Удаляет индексы связанные с удаляемыми таблицами ✅
+  - **Примечание:** Миграция создана, но не применена. Для применения выполните: `alembic upgrade head`
 
 ---
 
-## Фаза 2: Frontend (React / Effector / TypeScript)
+## Фаза 2: Frontend (React / Effector / TypeScript) ✅ ВЫПОЛНЕНО
 
-### 1. Обновление типов и API
+### 1. Обновление типов и API ✅
 
-- [ ] **Обновить типы в `frontend/src/entities/llm-config/types.ts` (или `index.ts`):**
+- [x] **Обновить типы в `frontend/src/entities/llm-config/types.ts`:** ✅
 
-  - Удалить интерфейсы `ModelConfig`, `EmbeddingConfig` как самостоятельные сущности с ID.
-  - Обновить интерфейс `ConfigPreset`: заменить поля `*_id` на поле `config_data` (или развернуть его структуру в типе).
-  - Создать интерфейс для структуры настроек (похожий на то, что было в ModelConfig, но без ID).
+  - Созданы новые типы для структуры `config_data`: `SamplerSettings`, `LLMConfigData`, `RAGConfig`, `GuardConfig`, `StorytellingConfig`, `EmbeddingConfigData`, `GlobalConfigSchema` ✅
+  - Обновлен интерфейс `ConfigPreset`: заменены поля `*_config_id` и `*_enabled` на поле `config_data: GlobalConfigSchema` ✅
+  - Обновлены `ConfigPresetCreate` и `ConfigPresetUpdate` для работы с `config_data` ✅
+  - Старые типы `ModelConfig` и `EmbeddingConfig` помечены как deprecated, но оставлены для обратной совместимости ✅
 
-- [ ] **Очистить API слой:**
-  - Удалить `frontend/src/entities/llm-config/model/model-configs.ts`
-  - Удалить `frontend/src/entities/llm-config/model/embedding-configs.ts`
-  - Убрать их из экспортов.
+- [x] **Очистить API слой:** ✅
+  - Удален `frontend/src/entities/llm-config/model/model-configs.ts` ✅
+  - Удален `frontend/src/entities/llm-config/model/embedding-configs.ts` ✅
+  - Удалены функции для model-configs и embedding-configs из `llm-config-api.ts` ✅
+  - Убраны экспорты `modelConfigsModel` и `embeddingConfigsModel` из `index.ts` ✅
 
-### 2. Рефакторинг стора `presets.ts`
+### 2. Рефакторинг стора `presets.ts` ✅
 
-- [ ] Убедиться, что `presetsModel` загружает и хранит полные объекты пресетов с новой структурой.
+- [x] `presetsModel` работает с новой структурой `ConfigPreset` с полем `config_data` ✅
 
-### 3. Рефакторинг Feature: `api-settings`
+### 3. Рефакторинг Feature: `api-settings` ✅
 
-Это самая объемная часть. Логика "сборки" пресета из кусков удаляется.
+Логика "сборки" пресета из кусков удалена.
 
-- [ ] **Обновить `frontend/src/features/api-settings/model/api-settings-model.ts`:**
+- [x] **Обновлен `frontend/src/features/api-settings/model/api-settings-model.ts`:** ✅
 
-  - Удалить сэмплы, которые слушали загрузку `modelConfigs`.
-  - Удалить `findConfig` логику.
-  - Формы редактирования (Main, RAG и т.д.) теперь должны принимать **часть данных** из активного пресета, а при сохранении — вызывать обновление **всего пресета** (patch).
+  - Удалены импорты и зависимости от `modelConfigsModel` и `embeddingConfigsModel` ✅
+  - Удалены сэмплы, которые слушали загрузку `modelConfigs` и `embeddingConfigs` ✅
+  - Удалена логика `findConfig` ✅
+  - Создана новая фабрика форм `createConfigDataFormFactory` для работы с частями `config_data` ✅
+  - Формы редактирования (Main, RAG, Guard, Storytelling, Embedding) теперь работают с частями `activePreset.config_data` ✅
+  - При сохранении формы обновляют весь пресет через `updatePresetFx` с обновленным `config_data` ✅
+  - Добавлена логика инициализации форм при изменении активного пресета ✅
+  - Добавлена логика переинициализации форм после успешного сохранения ✅
 
-- [ ] **Обновить UI компоненты:**
-  - **`frontend/src/features/api-settings/ui/model-config-form.tsx`**:
-    - Больше не создает новый конфиг модели.
-    - Просто редактирует переданный объект настроек.
-  - **`frontend/src/features/api-settings/ui/embedding-config-form.tsx`**:
-    - Аналогично, редактирует настройки эмбеддинга внутри пресета.
-  - **`frontend/src/features/api-settings/ui/blocks/*.tsx`**:
-    - Компоненты-блоки (Main Model, RAG Block) должны получать данные напрямую из `activePreset.config_data.main_model` и т.д.
+- [x] **Обновлены UI компоненты:** ✅
+  - **`frontend/src/features/api-settings/ui/blocks/model-config-block.tsx`**: ✅
+    - Удален селектор конфигов и кнопки создания/удаления отдельных конфигов ✅
+    - Получает данные напрямую из формы, которая работает с `config_data.main_model` (или rag/guard/storytelling) ✅
+    - Обновлена работа с `sampler_settings` (теперь вложенный объект) ✅
+    - Удалены зависимости от `modelConfigsModel` ✅
+  - **`frontend/src/features/api-settings/ui/blocks/embedding-config-block.tsx`**: ✅
+    - Аналогично `model-config-block.tsx` ✅
+    - Получает данные из формы, работающей с `config_data.embedding` ✅
+    - Удалены зависимости от `embeddingConfigsModel` ✅
+  - **`frontend/src/features/api-settings/ui/blocks/global-preset-block.tsx`**: ✅
+    - Обновлен `handleDuplicate`: копирует `config_data` вместо отдельных ID ✅
+  - **`frontend/src/features/api-settings/ui/api-settings-drawer.tsx`**: ✅
+    - Обновлена передача данных в блоки: удалены `configId` и `onConfigChange` ✅
+    - Обновлен `onToggle` для работы с `config_data.rag.enabled`, `config_data.guard.enabled`, `config_data.storytelling.enabled` ✅
+  - **`frontend/src/features/api-settings/ui/preset-form.tsx`**: ✅
+    - Полностью переписан для создания пресета с `config_data` ✅
+    - Использует функцию `createDefaultConfigData()` для создания валидной структуры по умолчанию ✅
+    - Упрощен: создает пресет с дефолтной структурой, которую можно редактировать после создания ✅
+  - **Удалены неиспользуемые компоненты**: ✅
+    - `model-config-form.tsx` - удален ✅
+    - `embedding-config-form.tsx` - удален ✅
+    - `model-configs-section.tsx` - удален ✅
+    - `embedding-configs-section.tsx` - удален ✅
 
 ### 4. Проверка
 
 - [ ] Убедиться, что создание нового пресета создает запись с валидным JSON.
 - [ ] Убедиться, что переключение пресетов корректно обновляет все формы на экране.
-- [ ] Проверить сохранение изменений (PUT запрос должен отправлять обновленный JSON).
+- [ ] Проверить сохранение изменений (PATCH запрос должен отправлять обновленный JSON).

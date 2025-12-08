@@ -9,8 +9,6 @@ from uuid import uuid4
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from app.models.embedding_config import EmbeddingConfig
-    from app.models.model_config import ModelConfig
     from app.models.story import Story
     from app.models.user import User
 
@@ -31,32 +29,10 @@ class ConfigPreset(SQLModel, table=True):
     description: str | None = Field(default=None, max_length=512, nullable=True)
     is_default: bool = Field(default=False, nullable=False)
 
-    # Main model (required)
-    main_model_config_id: str = Field(
-        foreign_key="model_configs.id", nullable=False
-    )
-
-    # RAG model (optional)
-    rag_model_config_id: str | None = Field(
-        default=None, foreign_key="model_configs.id", nullable=True
-    )
-    rag_enabled: bool = Field(default=False, nullable=False)
-
-    # Guard model (optional) - for validation/checking
-    guard_model_config_id: str | None = Field(
-        default=None, foreign_key="model_configs.id", nullable=True
-    )
-    guard_enabled: bool = Field(default=False, nullable=False)
-
-    # Storytelling model (optional) - for final output
-    storytelling_model_config_id: str | None = Field(
-        default=None, foreign_key="model_configs.id", nullable=True
-    )
-    storytelling_enabled: bool = Field(default=False, nullable=False)
-
-    # Embedding config (required)
-    embedding_config_id: str = Field(
-        foreign_key="embedding_configs.id", nullable=False
+    # Configuration data stored as JSON
+    config_data: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSON, nullable=False),
     )
 
     # Fallback strategy
@@ -76,7 +52,4 @@ class ConfigPreset(SQLModel, table=True):
     # Relationships
     user: "User" = Relationship(back_populates="config_presets")
     stories: list["Story"] = Relationship(back_populates="preset")
-
-    # Note: SQLModel doesn't support multiple FKs to same table well in relationships
-    # We'll handle model config lookups in the service layer
 

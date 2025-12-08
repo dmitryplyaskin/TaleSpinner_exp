@@ -76,58 +76,71 @@ export const ApiSettingsDrawer = ({
               <ModelConfigBlock
                 title="Main Model"
                 form={mainModelForm}
-                configId={activePreset?.main_model_config_id}
-                onConfigChange={(id) =>
-                  updatePreset({ main_model_config_id: id })
-                }
                 onManageTokens={setTokenModalProvider}
               />
 
               <ModelConfigBlock
                 title="RAG Model"
                 form={ragModelForm}
-                configId={activePreset?.rag_model_config_id}
-                onConfigChange={(id) =>
-                  updatePreset({ rag_model_config_id: id })
-                }
-                enabled={activePreset?.rag_enabled ?? false}
-                onToggle={(enabled) => updatePreset({ rag_enabled: enabled })}
+                enabled={activePreset?.config_data.rag.enabled ?? false}
+                onToggle={(enabled) => {
+                  if (!activePreset) return;
+                  updatePreset({
+                    config_data: {
+                      ...activePreset.config_data,
+                      rag: {
+                        ...activePreset.config_data.rag,
+                        enabled,
+                      },
+                    },
+                  });
+                }}
                 onManageTokens={setTokenModalProvider}
               />
 
               <ModelConfigBlock
                 title="Guard Model"
                 form={guardModelForm}
-                configId={activePreset?.guard_model_config_id}
-                onConfigChange={(id) =>
-                  updatePreset({ guard_model_config_id: id })
-                }
-                enabled={activePreset?.guard_enabled ?? false}
-                onToggle={(enabled) => updatePreset({ guard_enabled: enabled })}
+                enabled={activePreset?.config_data.guard.enabled ?? false}
+                onToggle={(enabled) => {
+                  if (!activePreset) return;
+                  updatePreset({
+                    config_data: {
+                      ...activePreset.config_data,
+                      guard: {
+                        ...activePreset.config_data.guard,
+                        enabled,
+                      },
+                    },
+                  });
+                }}
                 onManageTokens={setTokenModalProvider}
               />
 
               <ModelConfigBlock
                 title="Storytelling Model"
                 form={storytellingModelForm}
-                configId={activePreset?.storytelling_model_config_id}
-                onConfigChange={(id) =>
-                  updatePreset({ storytelling_model_config_id: id })
+                enabled={
+                  activePreset?.config_data.storytelling.enabled ?? false
                 }
-                enabled={activePreset?.storytelling_enabled ?? false}
-                onToggle={(enabled) =>
-                  updatePreset({ storytelling_enabled: enabled })
-                }
+                onToggle={(enabled) => {
+                  if (!activePreset) return;
+                  updatePreset({
+                    config_data: {
+                      ...activePreset.config_data,
+                      storytelling: {
+                        ...activePreset.config_data.storytelling,
+                        enabled,
+                      },
+                    },
+                  });
+                }}
                 onManageTokens={setTokenModalProvider}
               />
 
               <EmbeddingConfigBlock
                 title="Embedding"
                 form={embeddingForm}
-                configId={activePreset?.embedding_config_id}
-                onConfigChange={(id) =>
-                  updatePreset({ embedding_config_id: id })
-                }
                 onManageTokens={setTokenModalProvider}
               />
             </Stack>

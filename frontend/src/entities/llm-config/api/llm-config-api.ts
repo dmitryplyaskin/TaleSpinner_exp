@@ -7,12 +7,6 @@ import type {
   Token,
   TokenCreate,
   TokenUpdate,
-  ModelConfig,
-  ModelConfigCreate,
-  ModelConfigUpdate,
-  EmbeddingConfig,
-  EmbeddingConfigCreate,
-  EmbeddingConfigUpdate,
   ConfigPreset,
   ConfigPresetCreate,
   ConfigPresetUpdate,
@@ -107,110 +101,6 @@ export const deleteToken = async (
   });
 };
 
-// ============ Model Configs ============
-
-export const fetchModelConfigs = async (
-  userId: string
-): Promise<ModelConfig[]> => {
-  return request<ModelConfig[]>("/api/v1/model-configs", {
-    headers: createHeaders(userId),
-  });
-};
-
-export const fetchModelConfig = async (
-  userId: string,
-  configId: string
-): Promise<ModelConfig> => {
-  return request<ModelConfig>(`/api/v1/model-configs/${configId}`, {
-    headers: createHeaders(userId),
-  });
-};
-
-export const createModelConfig = async (
-  userId: string,
-  data: ModelConfigCreate
-): Promise<ModelConfig> => {
-  return request<ModelConfig>("/api/v1/model-configs", {
-    method: "POST",
-    headers: createHeaders(userId),
-    body: JSON.stringify(data),
-  });
-};
-
-export const updateModelConfig = async (
-  userId: string,
-  configId: string,
-  data: ModelConfigUpdate
-): Promise<ModelConfig> => {
-  return request<ModelConfig>(`/api/v1/model-configs/${configId}`, {
-    method: "PATCH",
-    headers: createHeaders(userId),
-    body: JSON.stringify(data),
-  });
-};
-
-export const deleteModelConfig = async (
-  userId: string,
-  configId: string
-): Promise<void> => {
-  return request<void>(`/api/v1/model-configs/${configId}`, {
-    method: "DELETE",
-    headers: createHeaders(userId),
-  });
-};
-
-// ============ Embedding Configs ============
-
-export const fetchEmbeddingConfigs = async (
-  userId: string
-): Promise<EmbeddingConfig[]> => {
-  return request<EmbeddingConfig[]>("/api/v1/embedding-configs", {
-    headers: createHeaders(userId),
-  });
-};
-
-export const fetchEmbeddingConfig = async (
-  userId: string,
-  configId: string
-): Promise<EmbeddingConfig> => {
-  return request<EmbeddingConfig>(`/api/v1/embedding-configs/${configId}`, {
-    headers: createHeaders(userId),
-  });
-};
-
-export const createEmbeddingConfig = async (
-  userId: string,
-  data: EmbeddingConfigCreate
-): Promise<EmbeddingConfig> => {
-  return request<EmbeddingConfig>("/api/v1/embedding-configs", {
-    method: "POST",
-    headers: createHeaders(userId),
-    body: JSON.stringify(data),
-  });
-};
-
-export const updateEmbeddingConfig = async (
-  userId: string,
-  configId: string,
-  data: EmbeddingConfigUpdate
-): Promise<EmbeddingConfig> => {
-  return request<EmbeddingConfig>(`/api/v1/embedding-configs/${configId}`, {
-    method: "PATCH",
-    headers: createHeaders(userId),
-    body: JSON.stringify(data),
-  });
-};
-
-export const deleteEmbeddingConfig = async (
-  userId: string,
-  configId: string
-): Promise<void> => {
-  return request<void>(`/api/v1/embedding-configs/${configId}`, {
-    method: "DELETE",
-    headers: createHeaders(userId),
-  });
-};
-
 // ============ Presets ============
 
 export const fetchPresets = async (userId: string): Promise<ConfigPreset[]> => {
@@ -281,4 +171,3 @@ export const deletePreset = async (
     headers: createHeaders(userId),
   });
 };
-

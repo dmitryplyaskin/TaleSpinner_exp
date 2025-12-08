@@ -9,12 +9,21 @@ export type {
   TokenCreate,
   TokenUpdate,
   TokenSelectionStrategy,
+  // Legacy types (deprecated)
   ModelConfig,
   ModelConfigCreate,
   ModelConfigUpdate,
   EmbeddingConfig,
   EmbeddingConfigCreate,
   EmbeddingConfigUpdate,
+  // New config_data types
+  SamplerSettings,
+  LLMConfigData,
+  RAGConfig,
+  GuardConfig,
+  StorytellingConfig,
+  EmbeddingConfigData,
+  GlobalConfigSchema,
   FallbackStrategy,
   ConfigPreset,
   ConfigPresetCreate,
@@ -24,6 +33,4 @@ export type {
 // Models
 export * as providersModel from "./model/providers";
 export * as tokensModel from "./model/tokens";
-export * as modelConfigsModel from "./model/model-configs";
-export * as embeddingConfigsModel from "./model/embedding-configs";
 export * as presetsModel from "./model/presets";

@@ -1,33 +1,39 @@
 import { createStore, createEvent, createEffect, sample } from "effector";
 import type {
-  ModelConfig,
-  ModelConfigUpdate,
-  EmbeddingConfig,
-  EmbeddingConfigUpdate,
+  LLMConfigData,
+  EmbeddingConfigData,
+  GlobalConfigSchema,
 } from "@/entities/llm-config/types";
 
-type AnyConfig = ModelConfig | EmbeddingConfig;
-type AnyConfigUpdate = ModelConfigUpdate | EmbeddingConfigUpdate;
+type ConfigData = LLMConfigData | EmbeddingConfigData;
 
-export interface ConfigFormFactoryOptions<
-  T extends AnyConfig,
-  U extends AnyConfigUpdate,
-  C = unknown
-> {
-  saveFx: (params: { configId: string; data: U }) => Promise<T>;
-  createFx: (data: C) => Promise<T>; // For duplication
+export interface ConfigDataFormFactoryOptions<T extends ConfigData> {
+  // Function to update the entire preset with updated config_data
+  updatePresetFx: (params: {
+    userId: string;
+    presetId: string;
+    configData: GlobalConfigSchema;
+  }) => Promise<{ config_data: GlobalConfigSchema }>;
+  // Function to get the current config from preset's config_data
+  getConfigFromPreset: (preset: {
+    config_data: GlobalConfigSchema;
+  }) => T | null;
+  // Function to update config_data with new config
+  updateConfigData: (
+    configData: GlobalConfigSchema,
+    newConfig: T
+  ) => GlobalConfigSchema;
 }
 
-export function createConfigFormFactory<
-  T extends AnyConfig,
-  U extends AnyConfigUpdate,
-  C = unknown
->({ saveFx, createFx }: ConfigFormFactoryOptions<T, U, C>) {
+export function createConfigDataFormFactory<T extends ConfigData>({
+  updatePresetFx,
+  getConfigFromPreset,
+  updateConfigData,
+}: ConfigDataFormFactoryOptions<T>) {
   // Events
   const init = createEvent<T>();
   const fieldChanged = createEvent<{ key: keyof T; value: unknown }>();
   const saveTriggered = createEvent();
-  const duplicateTriggered = createEvent<string>(); // New name
   const resetTriggered = createEvent();
 
   // Stores
@@ -59,55 +65,37 @@ export function createConfigFormFactory<
     target: $isDirty,
   });
 
-  // Save
+  // Save - updates the entire preset
   const saveEffect = createEffect(
-    async ({ id, data }: { id: string; data: U }) => {
-      return saveFx({ configId: id, data });
+    async ({
+      userId,
+      presetId,
+      currentConfigData,
+      updatedConfig,
+    }: {
+      userId: string;
+      presetId: string;
+      currentConfigData: GlobalConfigSchema;
+      updatedConfig: T;
+    }) => {
+      const updatedConfigData = updateConfigData(
+        currentConfigData,
+        updatedConfig
+      );
+      const result = await updatePresetFx({
+        userId,
+        presetId,
+        configData: updatedConfigData,
+      });
+      return result.config_data;
     }
   );
-
-  sample({
-    clock: saveTriggered,
-    source: $config,
-    filter: (config): config is T => !!config,
-    fn: (config) => {
-      // Extract only updatable fields
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, user_id, created_at, updated_at, ...updatable } =
-        config as unknown as Record<string, unknown>;
-      return { id: id as string, data: updatable as unknown as U };
-    },
-    target: saveEffect,
-  });
 
   $saveStatus
     .on(saveEffect.pending, () => "saving")
     .on(saveEffect.done, () => "success")
     .on(saveEffect.fail, () => "error")
     .reset(resetTriggered, fieldChanged);
-
-  // Update initial config on successful save to reset dirty state
-  sample({
-    clock: saveEffect.doneData,
-    target: [init, $initialConfig], // Re-init with returned data
-  });
-
-  // Duplicate
-  const duplicateEffect = createEffect(
-    async ({ config, name }: { config: T; name: string }) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, user_id, created_at, updated_at, ...rest } =
-        config as unknown as Record<string, unknown>;
-      return createFx({ ...rest, name } as C);
-    }
-  );
-
-  duplicateTriggered.watch((name) => {
-    const config = $config.getState();
-    if (config) {
-      duplicateEffect({ config, name });
-    }
-  });
 
   return {
     $config,
@@ -116,15 +104,11 @@ export function createConfigFormFactory<
     init,
     fieldChanged,
     saveTriggered,
-    duplicateTriggered,
     resetTriggered,
     saveEffect,
-    duplicateEffect,
   };
 }
 
-export type ConfigFormInstance<
-  T extends AnyConfig,
-  U extends AnyConfigUpdate,
-  C = unknown
-> = ReturnType<typeof createConfigFormFactory<T, U, C>>;
+export type ConfigDataFormInstance<T extends ConfigData> = ReturnType<
+  typeof createConfigDataFormFactory<T>
+>;

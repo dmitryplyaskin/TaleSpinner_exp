@@ -9,11 +9,18 @@ from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
 from app.models.config_preset import ConfigPreset
-from app.schemas.config_preset import ConfigPresetCreate, ConfigPresetUpdate
-from app.schemas.embedding_config import EmbeddingConfigCreate
-from app.schemas.model_config import ModelConfigCreate
-from app.models.provider import ProviderType
-from app.services import embedding_configs, model_configs
+from app.models.provider import ProviderType, TokenSelectionStrategy
+from app.schemas.config_preset import (
+    ConfigPresetCreate,
+    ConfigPresetUpdate,
+    EmbeddingConfigData,
+    GlobalConfigSchema,
+    LLMConfig,
+    RAGConfig,
+    GuardConfig,
+    StorytellingConfig,
+    SamplerSettings,
+)
 
 
 def create_preset(
@@ -29,14 +36,7 @@ def create_preset(
         name=payload.name,
         description=payload.description,
         is_default=payload.is_default,
-        main_model_config_id=payload.main_model_config_id,
-        rag_model_config_id=payload.rag_model_config_id,
-        rag_enabled=payload.rag_enabled,
-        guard_model_config_id=payload.guard_model_config_id,
-        guard_enabled=payload.guard_enabled,
-        storytelling_model_config_id=payload.storytelling_model_config_id,
-        storytelling_enabled=payload.storytelling_enabled,
-        embedding_config_id=payload.embedding_config_id,
+        config_data=payload.config_data.model_dump(),
         fallback_strategy=payload.fallback_strategy.model_dump(),
     )
     session.add(preset)
@@ -90,9 +90,15 @@ def update_preset(
 
     update_data = payload.model_dump(exclude_unset=True)
 
+    # Handle config_data separately - convert to dict if it's a Pydantic model
+    if "config_data" in update_data and update_data["config_data"]:
+        if hasattr(update_data["config_data"], "model_dump"):
+            update_data["config_data"] = update_data["config_data"].model_dump()
+
     # Handle fallback_strategy separately
     if "fallback_strategy" in update_data and update_data["fallback_strategy"]:
-        update_data["fallback_strategy"] = update_data["fallback_strategy"].model_dump()
+        if hasattr(update_data["fallback_strategy"], "model_dump"):
+            update_data["fallback_strategy"] = update_data["fallback_strategy"].model_dump()
 
     for key, value in update_data.items():
         setattr(preset, key, value)
@@ -113,35 +119,39 @@ def delete_preset(session: Session, user_id: str, preset_id: str) -> None:
 
 def create_default_preset_structure(session: Session, user_id: str) -> ConfigPreset:
     """Create a default preset structure with necessary model configs."""
-    # 1. Create default embedding config
-    embedding_payload = EmbeddingConfigCreate(
-        name="Default OpenAI Embedding",
-        provider=ProviderType.OPENAI_COMPATIBLE,
-        model_id="text-embedding-3-small",
-        dimensions=1536,
-    )
-    embedding_config = embedding_configs.create_embedding_config(
-        session, user_id, embedding_payload
-    )
-
-    # 2. Create default model config
-    model_payload = ModelConfigCreate(
-        name="Default OpenAI Model",
+    # Create default config_data structure
+    default_main_model = LLMConfig(
         provider=ProviderType.OPENAI_COMPATIBLE,
         model_id="gpt-4o-mini",
-        temperature=0.7,
+        token_ids=[],
+        token_selection_strategy=TokenSelectionStrategy.FAILOVER,
+        sampler_settings=SamplerSettings(temperature=0.7),
     )
-    model_config = model_configs.create_model_config(session, user_id, model_payload)
 
-    # 3. Create preset linking them
+    default_embedding = EmbeddingConfigData(
+        provider=ProviderType.OPENAI_COMPATIBLE,
+        model_id="text-embedding-3-small",
+        token_ids=[],
+        dimensions=1536,
+        batch_size=100,
+    )
+
+    default_config_data = GlobalConfigSchema(
+        main_model=default_main_model,
+        rag=RAGConfig(enabled=False),
+        guard=GuardConfig(enabled=False),
+        storytelling=StorytellingConfig(enabled=False),
+        embedding=default_embedding,
+    )
+
+    # Create preset with config_data
     preset_payload = ConfigPresetCreate(
         name="Default Preset",
         description="Automatically created default configuration",
         is_default=True,
-        main_model_config_id=model_config.id,
-        embedding_config_id=embedding_config.id,
+        config_data=default_config_data,
     )
-    
+
     return create_preset(session, user_id, preset_payload)
 
 

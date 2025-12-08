@@ -94,15 +94,7 @@ export const GlobalPresetBlock = () => {
       data: {
         name: newName,
         description: activePreset.description || undefined,
-        main_model_config_id: activePreset.main_model_config_id,
-        rag_model_config_id: activePreset.rag_model_config_id || undefined,
-        rag_enabled: activePreset.rag_enabled,
-        guard_model_config_id: activePreset.guard_model_config_id || undefined,
-        guard_enabled: activePreset.guard_enabled,
-        storytelling_model_config_id:
-          activePreset.storytelling_model_config_id || undefined,
-        storytelling_enabled: activePreset.storytelling_enabled,
-        embedding_config_id: activePreset.embedding_config_id,
+        config_data: activePreset.config_data,
         fallback_strategy: activePreset.fallback_strategy,
       },
     });

@@ -32,6 +32,17 @@ _models_cache: dict[tuple[ProviderType, str | None], CacheEntry] = {}
 
 def get_providers() -> list[ProviderInfo]:
     """Get list of all supported providers."""
+    providers = list(PROVIDER_CAPABILITIES.items())
+
+    # Current product direction: OpenRouter for LLM, Ollama for embeddings.
+    # Keep capabilities in code, but hide extra providers from API when env-only mode is enabled.
+    if settings.MODELS_FROM_ENV_ONLY:
+        providers = [
+            (p, caps)
+            for (p, caps) in providers
+            if p in (ProviderType.OPENROUTER, ProviderType.OLLAMA)
+        ]
+
     return [
         ProviderInfo(
             id=provider,
@@ -40,7 +51,7 @@ def get_providers() -> list[ProviderInfo]:
             supports_embedding=caps["supports_embedding"],
             requires_api_key=caps["requires_api_key"],
         )
-        for provider, caps in PROVIDER_CAPABILITIES.items()
+        for provider, caps in providers
     ]
 
 
@@ -60,9 +71,41 @@ def get_provider(provider_id: ProviderType) -> ProviderInfo | None:
 
 async def fetch_openrouter_models(api_key: str | None = None) -> list[ProviderModelInfo]:
     """Fetch models from OpenRouter API."""
+    # Prefer env-managed list (current mode). If list is empty -> fallback to API.
+    if settings.MODELS_FROM_ENV_ONLY:
+        env_models = list(settings.OPENROUTER_MODELS)
+        # If the list isn't provided, try to build it from preset-oriented vars.
+        if not env_models:
+            candidates = [
+                settings.openrouter_main_model,
+                settings.OPENROUTER_RAG_MODEL,
+                settings.OPENROUTER_GUARD_MODEL,
+                settings.OPENROUTER_STORYTELLING_MODEL,
+                settings.openrouter_default_model,
+            ]
+            seen: set[str] = set()
+            for c in candidates:
+                if c and c.strip() and c.strip() not in seen:
+                    seen.add(c.strip())
+                    env_models.append(c.strip())
+
+        if env_models:
+            return [
+                ProviderModelInfo(
+                    id=m,
+                    name=m,
+                    provider=ProviderType.OPENROUTER,
+                    model_type=ModelType.LLM,
+                    context_length=None,
+                    description=None,
+                )
+                for m in env_models
+            ]
+
     headers = {}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+    token = api_key or (settings.OPENROUTER_API_KEY or None)
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
 
     async with httpx.AsyncClient() as client:
         response = await client.get(
@@ -104,6 +147,20 @@ async def fetch_openrouter_models(api_key: str | None = None) -> list[ProviderMo
 
 async def fetch_ollama_models() -> list[ProviderModelInfo]:
     """Fetch models from local Ollama instance."""
+    # Prefer env-managed embedding model (current mode). If empty -> fallback to /api/tags.
+    if settings.MODELS_FROM_ENV_ONLY and settings.OLLAMA_EMBEDDING_MODEL.strip():
+        model_name = settings.OLLAMA_EMBEDDING_MODEL.strip()
+        return [
+            ProviderModelInfo(
+                id=model_name,
+                name=model_name,
+                provider=ProviderType.OLLAMA,
+                model_type=ModelType.EMBEDDING,
+                context_length=None,
+                description=None,
+            )
+        ]
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(

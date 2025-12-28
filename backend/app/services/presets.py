@@ -8,6 +8,7 @@ from typing import Iterable
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
+from app.core.config import settings
 from app.models.config_preset import ConfigPreset
 from app.models.provider import ProviderType, TokenSelectionStrategy
 from app.schemas.config_preset import (
@@ -120,27 +121,81 @@ def delete_preset(session: Session, user_id: str, preset_id: str) -> None:
 def create_default_preset_structure(session: Session, user_id: str) -> ConfigPreset:
     """Create a default preset structure with necessary model configs."""
     # Create default config_data structure
+    default_llm_model_id = settings.openrouter_main_model or "openai/gpt-4o-mini"
     default_main_model = LLMConfig(
-        provider=ProviderType.OPENAI_COMPATIBLE,
-        model_id="gpt-4o-mini",
+        provider=ProviderType.OPENROUTER,
+        model_id=default_llm_model_id,
         token_ids=[],
         token_selection_strategy=TokenSelectionStrategy.FAILOVER,
         sampler_settings=SamplerSettings(temperature=0.7),
+        base_url=settings.OPENROUTER_BASE_URL,
+    )
+
+    # Optional LLM blocks
+    rag_config = RAGConfig(
+        enabled=settings.RAG_ENABLED,
+        config=(
+            LLMConfig(
+                provider=ProviderType.OPENROUTER,
+                model_id=(settings.OPENROUTER_RAG_MODEL or default_llm_model_id),
+                token_ids=[],
+                token_selection_strategy=TokenSelectionStrategy.FAILOVER,
+                sampler_settings=SamplerSettings(temperature=0.7),
+                base_url=settings.OPENROUTER_BASE_URL,
+            )
+            if settings.RAG_ENABLED
+            else None
+        ),
+    )
+
+    guard_config = GuardConfig(
+        enabled=settings.GUARD_ENABLED,
+        config=(
+            LLMConfig(
+                provider=ProviderType.OPENROUTER,
+                model_id=(settings.OPENROUTER_GUARD_MODEL or default_llm_model_id),
+                token_ids=[],
+                token_selection_strategy=TokenSelectionStrategy.FAILOVER,
+                sampler_settings=SamplerSettings(temperature=0.7),
+                base_url=settings.OPENROUTER_BASE_URL,
+            )
+            if settings.GUARD_ENABLED
+            else None
+        ),
+    )
+
+    storytelling_config = StorytellingConfig(
+        enabled=settings.STORYTELLING_ENABLED,
+        config=(
+            LLMConfig(
+                provider=ProviderType.OPENROUTER,
+                model_id=(
+                    settings.OPENROUTER_STORYTELLING_MODEL or default_llm_model_id
+                ),
+                token_ids=[],
+                token_selection_strategy=TokenSelectionStrategy.FAILOVER,
+                sampler_settings=SamplerSettings(temperature=0.7),
+                base_url=settings.OPENROUTER_BASE_URL,
+            )
+            if settings.STORYTELLING_ENABLED
+            else None
+        ),
     )
 
     default_embedding = EmbeddingConfigData(
-        provider=ProviderType.OPENAI_COMPATIBLE,
-        model_id="text-embedding-3-small",
+        provider=ProviderType.OLLAMA,
+        model_id=settings.OLLAMA_EMBEDDING_MODEL.strip() or "nomic-embed-text",
         token_ids=[],
-        dimensions=1536,
+        dimensions=settings.OLLAMA_EMBEDDING_DIMENSIONS,
         batch_size=100,
+        base_url=settings.OLLAMA_BASE_URL,
     )
 
     default_config_data = GlobalConfigSchema(
         main_model=default_main_model,
-        rag=RAGConfig(enabled=False),
-        guard=GuardConfig(enabled=False),
-        storytelling=StorytellingConfig(enabled=False),
+        rag=rag_config,
+        guard=guard_config,
+        storytelling=storytelling_config,
         embedding=default_embedding,
     )
 

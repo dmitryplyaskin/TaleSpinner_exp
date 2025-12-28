@@ -131,6 +131,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=str(_REPO_ROOT / ".env"),
         env_ignore_empty=True,
+        # Important:
+        # pydantic-settings treats complex types (e.g. list[str]) as JSON by default and
+        # will try `json.loads()` on env values before validators run.
+        # We disable that here so our `field_validator(..., mode="before")` can accept
+        # both CSV (`a,b`) and JSON-like (`["a","b"]`) formats.
+        enable_decoding=False,
     )
 
 

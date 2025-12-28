@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdatePassword
+from app.services import presets
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -35,6 +36,10 @@ def create_user(session: Session, payload: UserCreate) -> User:
     session.add(user)
     session.commit()
     session.refresh(user)
+
+    # Initialize default presets for the new user
+    presets.create_default_preset_structure(session, user.id)
+
     return user
 
 

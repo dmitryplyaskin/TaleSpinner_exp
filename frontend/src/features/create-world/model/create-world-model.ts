@@ -5,7 +5,13 @@ import {
   createStore,
   sample,
 } from "effector";
-import type { HitlAnswer, HitlPhase, HitlRound, WorldDraft } from "./types";
+import type {
+  HitlAnswer,
+  HitlPhase,
+  HitlRound,
+  PlotTypeId,
+  WorldDraft,
+} from "./types";
 
 const TOTAL_STEPS = 6;
 const HITL_THINKING_DELAY_MS = 1200;
@@ -71,6 +77,9 @@ export const closeCreateWorldForm = createEvent();
 export const nextStep = createEvent();
 export const prevStep = createEvent();
 export const setWorldDescription = createEvent<string>();
+export const setPlotType = createEvent<PlotTypeId>();
+export const setPlotTypeCustom = createEvent<string>();
+export const setGlobalConflictEnabled = createEvent<boolean>();
 
 export const hitlContinueClicked = createEvent();
 export const hitlOptionSelected = createEvent<{
@@ -99,6 +108,30 @@ export const $currentStep = createStore(0)
 export const $worldDescription = createStore("")
   .on(setWorldDescription, (_, description) => description)
   .reset(closeCreateWorldForm);
+
+export const $plotType = createStore<PlotTypeId | null>(null)
+  .on(setPlotType, (_, plotType) => plotType)
+  .reset(closeCreateWorldForm);
+
+export const $plotTypeCustom = createStore("")
+  .on(setPlotTypeCustom, (_, text) => text)
+  .reset(closeCreateWorldForm);
+
+export const $isGlobalConflictEnabled = createStore(true)
+  .on(setGlobalConflictEnabled, (_, enabled) => enabled)
+  .reset(closeCreateWorldForm);
+
+export const $foundationCanContinue = combine(
+  $worldDescription,
+  $plotType,
+  $plotTypeCustom,
+  (description, plotType, customText) => {
+    if (!description.trim()) return false;
+    if (!plotType) return false;
+    if (plotType === "custom" && !customText.trim()) return false;
+    return true;
+  }
+);
 
 // --- HITL (mock) ---
 
@@ -243,6 +276,9 @@ export const $worldDraft = createStore<WorldDraft>({
 
 const buildDraftFromAnswers = (
   description: string,
+  plotType: PlotTypeId | null,
+  plotTypeCustom: string,
+  isGlobalConflictEnabled: boolean,
   answers: Record<string, HitlAnswer>
 ): WorldDraft => {
   const genre = answers.genre?.selectedOptionId ?? "";
@@ -250,12 +286,26 @@ const buildDraftFromAnswers = (
   const conflict = answers.main_conflict?.selectedOptionId ?? "";
   const protagonists = answers.protagonists?.selectedOptionId ?? "";
 
+  const plotText = (() => {
+    if (!plotType) return "";
+    if (plotType !== "custom") return plotType;
+    return plotTypeCustom.trim();
+  })();
+
   return {
-    overview: `Кратко: ${description.trim()}`.trim(),
+    overview: [
+      `Кратко: ${description.trim()}`.trim(),
+      plotText ? `Тип игры/сюжета: ${plotText}` : null,
+      `Глобальный конфликт: ${isGlobalConflictEnabled ? "нужен" : "не нужен"}`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
     geography:
       "География (заглушка): 2–3 ключевые локации, климат, транспорт/переходы.",
     societies: `Общества (заглушка): ключевые силы и группы. protagonists=${protagonists}`,
-    conflicts: `Конфликты (заглушка): conflict=${conflict}`,
+    conflicts: isGlobalConflictEnabled
+      ? `Конфликты (заглушка): conflict=${conflict || "TBD"}`
+      : "Конфликты (заглушка): без глобального конфликта — локальные проблемы, повседневные цели, эпизодические зацепки.",
     tone: `Тон (заглушка): genre=${genre}, magic=${magic}`,
   };
 };
@@ -268,7 +318,20 @@ sample({
 
 sample({
   clock: buildWorldDraft,
-  source: { description: $worldDescription, answers: $hitlAnswers },
-  fn: ({ description, answers }) => buildDraftFromAnswers(description, answers),
+  source: {
+    description: $worldDescription,
+    plotType: $plotType,
+    plotTypeCustom: $plotTypeCustom,
+    isGlobalConflictEnabled: $isGlobalConflictEnabled,
+    answers: $hitlAnswers,
+  },
+  fn: (src) =>
+    buildDraftFromAnswers(
+      src.description,
+      src.plotType,
+      src.plotTypeCustom,
+      src.isGlobalConflictEnabled,
+      src.answers
+    ),
   target: worldDraftBuilt,
 });

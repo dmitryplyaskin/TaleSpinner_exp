@@ -5,16 +5,25 @@ import {
   Field,
   Heading,
   HStack,
+  Switch,
   Text,
   Textarea,
   VStack,
 } from "@chakra-ui/react";
 
 import {
+  $foundationCanContinue,
+  $isGlobalConflictEnabled,
+  $plotType,
+  $plotTypeCustom,
   $worldDescription,
   nextStep,
+  setGlobalConflictEnabled,
+  setPlotType,
+  setPlotTypeCustom,
   setWorldDescription,
 } from "../../model/create-world-model";
+import type { PlotTypeOption } from "../../model/types";
 
 interface FoundationStepProps {
   onCancel: () => void;
@@ -35,15 +44,96 @@ const exampleDescriptions = [
   },
 ];
 
+const plotTypeOptions: PlotTypeOption[] = [
+  {
+    id: "adventure",
+    label: "Приключение",
+    hint: "Поиск, путешествия, опасности, цели и награды.",
+  },
+  {
+    id: "mystery",
+    label: "Детектив",
+    hint: "Улики, тайны, расследование, раскрытие правды.",
+  },
+  {
+    id: "exploration",
+    label: "Исследование",
+    hint: "Открытие мира, неизвестное, экспедиции, находки.",
+  },
+  {
+    id: "survival",
+    label: "Выживание",
+    hint: "Ресурсы, риски, ограниченность, моральный выбор.",
+  },
+  {
+    id: "political_intrigue",
+    label: "Интриги",
+    hint: "Влияние, договоры, предательства, власть.",
+  },
+  {
+    id: "heist",
+    label: "Ограбление",
+    hint: "План, команда, проникновение, побег, последствия.",
+  },
+  {
+    id: "slice_of_life",
+    label: "Повседневность",
+    hint: "Дела, отношения, развитие персонажей, эпизоды.",
+  },
+  {
+    id: "horror",
+    label: "Хоррор",
+    hint: "Напряжение, неизвестное, уязвимость, страх.",
+  },
+  {
+    id: "romance",
+    label: "Романтика",
+    hint: "Отношения, драма, выборы, эмоциональные ставки.",
+  },
+  {
+    id: "war_campaign",
+    label: "Военная кампания",
+    hint: "Операции, фронт, тактика, цена победы.",
+  },
+  {
+    id: "comedy",
+    label: "Комедия",
+    hint: "Лёгкий тон, абсурд, ситуации, юмор.",
+  },
+  {
+    id: "custom",
+    label: "Свой вариант",
+    hint: "Опиши одним предложением, какой сюжет хочешь играть.",
+  },
+];
+
 export const FoundationStep = ({ onCancel }: FoundationStepProps) => {
-  const [worldDescription, handleSetDescription, handleNext] = useUnit([
+  const [
+    worldDescription,
+    plotType,
+    plotTypeCustom,
+    isGlobalConflictEnabled,
+    canContinue,
+    handleSetDescription,
+    handleSetPlotType,
+    handleSetPlotTypeCustom,
+    handleSetGlobalConflictEnabled,
+    handleNext,
+  ] = useUnit([
     $worldDescription,
+    $plotType,
+    $plotTypeCustom,
+    $isGlobalConflictEnabled,
+    $foundationCanContinue,
     setWorldDescription,
+    setPlotType,
+    setPlotTypeCustom,
+    setGlobalConflictEnabled,
     nextStep,
   ]);
 
   const handleContinue = () => {
-    if (!worldDescription.trim()) return;
+    if (!canContinue) return;
     handleNext();
   };
 
@@ -71,6 +161,73 @@ export const FoundationStep = ({ onCancel }: FoundationStepProps) => {
         <Field.HelperText>
           Опишите жанр, магию/технологии, общество, конфликты и т.д.
         </Field.HelperText>
+      </Field.Root>
+
+      <Field.Root required>
+        <Field.Label>Какой сюжет вы хотите играть?</Field.Label>
+        <Field.HelperText>
+          Это не “жанр мира”, а формат истории: детектив, выживание, интриги и т.д.
+        </Field.HelperText>
+
+        <VStack align="stretch" gap={2} pt={2}>
+          <HStack gap={2} wrap="wrap">
+            {plotTypeOptions.map((opt) => {
+              const isSelected = plotType === opt.id;
+              return (
+                <Button
+                  key={opt.id}
+                  variant={isSelected ? "solid" : "outline"}
+                  colorPalette={isSelected ? "brand" : undefined}
+                  onClick={() => handleSetPlotType(opt.id)}
+                  title={opt.hint}
+                >
+                  {opt.label}
+                </Button>
+              );
+            })}
+          </HStack>
+
+          {plotType && plotType !== "custom" && (
+            <Text fontSize="sm" color="fg.muted">
+              {plotTypeOptions.find((o) => o.id === plotType)?.hint ?? ""}
+            </Text>
+          )}
+
+          {plotType === "custom" && (
+            <Textarea
+              value={plotTypeCustom}
+              onChange={(e) => handleSetPlotTypeCustom(e.target.value)}
+              placeholder="Например: “детективное приключение с моральными выборами”"
+              minH="90px"
+              autoresize
+            />
+          )}
+        </VStack>
+      </Field.Root>
+
+      <Field.Root>
+        <Field.Label>Нужен ли глобальный конфликт?</Field.Label>
+        <Field.HelperText>
+          Если выключить — сюжет будет строиться на локальных проблемах и
+          эпизодах (подходит для повседневности и камерных историй).
+        </Field.HelperText>
+
+        <HStack justify="space-between" pt={2}>
+          <Text fontSize="sm" color="fg.muted">
+            {isGlobalConflictEnabled ? "Да, нужен" : "Нет, не нужен"}
+          </Text>
+
+          <Switch.Root
+            checked={isGlobalConflictEnabled}
+            onCheckedChange={(e) => handleSetGlobalConflictEnabled(!!e.checked)}
+            size="md"
+          >
+            <Switch.HiddenInput />
+            <Switch.Control>
+              <Switch.Thumb />
+            </Switch.Control>
+          </Switch.Root>
+        </HStack>
       </Field.Root>
 
       <VStack align="stretch" gap={3}>
@@ -109,7 +266,7 @@ export const FoundationStep = ({ onCancel }: FoundationStepProps) => {
           colorPalette="brand"
           variant="solid"
           onClick={handleContinue}
-          disabled={!worldDescription.trim()}
+          disabled={!canContinue}
         >
           Продолжить
         </Button>

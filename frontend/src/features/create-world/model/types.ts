@@ -1,5 +1,25 @@
 export type HitlPhase = "thinking" | "questions" | "done";
 
+export type PlotTypeId =
+  | "adventure"
+  | "mystery"
+  | "exploration"
+  | "survival"
+  | "political_intrigue"
+  | "heist"
+  | "horror"
+  | "slice_of_life"
+  | "romance"
+  | "war_campaign"
+  | "comedy"
+  | "custom";
+
+export interface PlotTypeOption {
+  id: PlotTypeId;
+  label: string;
+  hint?: string;
+}
+
 export interface HitlOption {
   id: string;
   label: string;

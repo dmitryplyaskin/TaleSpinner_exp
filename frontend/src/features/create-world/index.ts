@@ -5,6 +5,10 @@ export {
   $isFormOpen,
   $currentStep,
   $worldDescription,
+  $plotType,
+  $plotTypeCustom,
+  $isGlobalConflictEnabled,
+  $foundationCanContinue,
 } from "./model/create-world-model";
 
 

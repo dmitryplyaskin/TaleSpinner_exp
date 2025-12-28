@@ -8,6 +8,7 @@ from app.api.v1.providers import router as providers_router
 from app.api.v1.tokens import router as tokens_router
 from app.api.v1.presets import router as presets_router
 from app.api.v1.stories import router as stories_router
+from app.api.v1.runs import router as runs_router
 from app.core.config import settings
 from app.core.database import init_db
 
@@ -43,6 +44,7 @@ app.include_router(providers_router, prefix=settings.API_V1_STR)
 app.include_router(tokens_router, prefix=settings.API_V1_STR)
 app.include_router(presets_router, prefix=settings.API_V1_STR)
 app.include_router(stories_router, prefix=settings.API_V1_STR)
+app.include_router(runs_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():

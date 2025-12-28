@@ -1,20 +1,13 @@
 import { useUnit } from "effector-react";
-import {
-  Button,
-  Card,
-  Heading,
-  HStack,
-  Spinner,
-  Text,
-  Textarea,
-  VStack,
-} from "@chakra-ui/react";
+import { Button, Heading, HStack, Spinner, Text, Textarea, VStack } from "@chakra-ui/react";
 
 import {
   $hitlAnswers,
   $hitlCanContinue,
-  $hitlCurrentRound,
+  $hitlError,
   $hitlPhase,
+  $hitlQuestions,
+  $hitlStage,
   hitlContinueClicked,
   hitlFreeTextChanged,
   hitlOptionSelected,
@@ -28,7 +21,9 @@ interface HitlStepProps {
 export const HitlStep = ({ onCancel }: HitlStepProps) => {
   const [
     phase,
-    round,
+    stage,
+    error,
+    questions,
     answers,
     canContinue,
     goBack,
@@ -37,7 +32,9 @@ export const HitlStep = ({ onCancel }: HitlStepProps) => {
     continueClicked,
   ] = useUnit([
     $hitlPhase,
-    $hitlCurrentRound,
+    $hitlStage,
+    $hitlError,
+    $hitlQuestions,
     $hitlAnswers,
     $hitlCanContinue,
     prevStep,
@@ -46,11 +43,13 @@ export const HitlStep = ({ onCancel }: HitlStepProps) => {
     hitlContinueClicked,
   ]);
 
-  if (!round) {
+  if (error) {
     return (
       <VStack align="stretch" gap={6}>
-        <Heading size="lg">Агент</Heading>
-        <Text color="fg.muted">Нет сценария HITL (round не найден).</Text>
+        <VStack align="stretch" gap={2}>
+          <Heading size="lg">Ошибка</Heading>
+          <Text color="fg.muted">{error}</Text>
+        </VStack>
         <HStack justify="space-between" pt={4}>
           <Button variant="ghost" onClick={onCancel}>
             Отмена
@@ -63,12 +62,36 @@ export const HitlStep = ({ onCancel }: HitlStepProps) => {
     );
   }
 
+  const stageTitle = (() => {
+    switch (stage) {
+      case "analyzing":
+        return "Агент анализирует ввод…";
+      case "asking":
+        return "Агент формулирует вопросы…";
+      case "waiting_for_answers":
+        return "Ожидаю ваши ответы…";
+      case "building":
+        return "Агент собирает скелет мира…";
+      case "finalizing":
+        return "Финализирую…";
+      default:
+        return "Агент работает…";
+    }
+  })();
+
+  const stageDescription =
+    stage === "analyzing"
+      ? "Проверяю, достаточно ли информации, чтобы сразу собрать скелет мира."
+      : stage === "building"
+        ? "Собираю итоговый контекст и подробное описание мира."
+        : "Пожалуйста, подождите…";
+
   if (phase === "thinking") {
     return (
       <VStack align="stretch" gap={6}>
         <VStack align="stretch" gap={2}>
-          <Heading size="lg">{round.thinkingTitle}</Heading>
-          <Text color="fg.muted">{round.thinkingDescription}</Text>
+          <Heading size="lg">{stageTitle}</Heading>
+          <Text color="fg.muted">{stageDescription}</Text>
         </VStack>
 
         <HStack gap={3}>
@@ -94,22 +117,12 @@ export const HitlStep = ({ onCancel }: HitlStepProps) => {
         <VStack align="stretch" gap={2}>
           <Heading size="lg">Готово</Heading>
           <Text color="fg.muted">
-            Агент закончил собирать скелет мира. Переходим к редактированию.
+            Скелет мира готов. Перехожу к шагу редактирования…
           </Text>
         </VStack>
-
-        <HStack justify="space-between" gap={3} pt={4}>
-          <Button variant="ghost" onClick={onCancel}>
-            Отмена
-          </Button>
-          <HStack gap={3}>
-            <Button variant="outline" onClick={goBack}>
-              Назад
-            </Button>
-            <Button colorPalette="brand" variant="solid" onClick={continueClicked}>
-              Перейти к шагу 3
-            </Button>
-          </HStack>
+        <HStack gap={3}>
+          <Spinner />
+          <Text color="fg.muted">Пожалуйста, подождите…</Text>
         </HStack>
       </VStack>
     );
@@ -127,7 +140,7 @@ export const HitlStep = ({ onCancel }: HitlStepProps) => {
       </VStack>
 
       <VStack align="stretch" gap={4}>
-        {round.questions.map((q) => {
+        {questions.map((q) => {
           const selected = answers[q.id]?.selectedOptionId ?? null;
           const freeText = answers[q.id]?.freeText ?? "";
 

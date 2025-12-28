@@ -12,7 +12,7 @@ import {
 import {
   $worldDraft,
   nextStep,
-  prevStep,
+  setStep,
   setWorldDraftField,
 } from "../../model/create-world-model";
 
@@ -21,11 +21,11 @@ interface ReviewStepProps {
 }
 
 export const ReviewStep = ({ onCancel }: ReviewStepProps) => {
-  const [draft, setField, goNext, goBack] = useUnit([
+  const [draft, setField, goNext, goToStep] = useUnit([
     $worldDraft,
     setWorldDraftField,
     nextStep,
-    prevStep,
+    setStep,
   ]);
 
   return (
@@ -33,66 +33,44 @@ export const ReviewStep = ({ onCancel }: ReviewStepProps) => {
       <VStack align="stretch" gap={2}>
         <Heading size="lg">Скелет мира (черновик)</Heading>
         <Text color="fg.muted">
-          Заглушка шага 3: здесь будет ответ бэкенда. Пока можно прочитать и
-          отредактировать блоки, затем перейти дальше.
+          Это результат работы агента-архитектора. Можно подправить формулировки,
+          затем перейти к детализации мира.
         </Text>
       </VStack>
 
       <VStack align="stretch" gap={4}>
         <Field.Root>
-          <Field.Label>Обзор</Field.Label>
+          <Field.Label>Game prompt (основной контекст для игры)</Field.Label>
           <Textarea
-            value={draft.overview}
+            value={draft.gamePrompt}
             onChange={(e) =>
-              setField({ field: "overview", value: e.target.value })
+              setField({ field: "gamePrompt", value: e.target.value })
             }
-            minH="120px"
+            minH="140px"
             autoresize
           />
         </Field.Root>
 
         <Field.Root>
-          <Field.Label>География</Field.Label>
+          <Field.Label>World bible (подробное описание мира)</Field.Label>
           <Textarea
-            value={draft.geography}
+            value={draft.worldBible}
             onChange={(e) =>
-              setField({ field: "geography", value: e.target.value })
+              setField({ field: "worldBible", value: e.target.value })
             }
-            minH="120px"
+            minH="220px"
             autoresize
           />
         </Field.Root>
 
         <Field.Root>
-          <Field.Label>Общества и силы</Field.Label>
+          <Field.Label>Глобальный конфликт (опционально)</Field.Label>
           <Textarea
-            value={draft.societies}
+            value={draft.globalConflict}
             onChange={(e) =>
-              setField({ field: "societies", value: e.target.value })
+              setField({ field: "globalConflict", value: e.target.value })
             }
-            minH="120px"
-            autoresize
-          />
-        </Field.Root>
-
-        <Field.Root>
-          <Field.Label>Конфликты</Field.Label>
-          <Textarea
-            value={draft.conflicts}
-            onChange={(e) =>
-              setField({ field: "conflicts", value: e.target.value })
-            }
-            minH="120px"
-            autoresize
-          />
-        </Field.Root>
-
-        <Field.Root>
-          <Field.Label>Тон и стиль</Field.Label>
-          <Textarea
-            value={draft.tone}
-            onChange={(e) => setField({ field: "tone", value: e.target.value })}
-            minH="100px"
+            minH="140px"
             autoresize
           />
         </Field.Root>
@@ -103,7 +81,7 @@ export const ReviewStep = ({ onCancel }: ReviewStepProps) => {
           Отмена
         </Button>
         <HStack gap={3}>
-          <Button variant="outline" onClick={goBack}>
+          <Button variant="outline" onClick={() => goToStep(0)}>
             Назад
           </Button>
           <Button colorPalette="brand" variant="solid" onClick={goNext}>

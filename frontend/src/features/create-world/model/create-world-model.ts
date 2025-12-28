@@ -5,77 +5,29 @@ import {
   createStore,
   sample,
 } from "effector";
+import { userModel } from "@/entities/user";
+import { connectSse, type SseClient } from "@/shared/api/sse-client";
+import type { SseEnvelope } from "@/shared/api/sse-types";
 import type {
   HitlAnswer,
   HitlPhase,
-  HitlRound,
+  HitlQuestion,
   PlotTypeId,
   WorldDraft,
 } from "./types";
+import {
+  startWorldArchitectRun,
+  submitWorldArchitectAnswers,
+} from "../api/world-architect-api";
 
 const TOTAL_STEPS = 6;
-const HITL_THINKING_DELAY_MS = 1200;
-
-const hitlScript: HitlRound[] = [
-  {
-    id: "round_1",
-    thinkingTitle: "Агент думает…",
-    thinkingDescription:
-      "Собираю основу мира из вашего описания и подбираю уточняющие вопросы.",
-    questions: [
-      {
-        id: "genre",
-        question: "Какой жанр или настроение вам ближе?",
-        options: [
-          { id: "epic_fantasy", label: "Эпическое фэнтези" },
-          { id: "dark", label: "Мрачное / дарк" },
-          { id: "light", label: "Лёгкое / приключение" },
-        ],
-      },
-      {
-        id: "magic_tech",
-        question: "Какая роль магии или технологий в мире?",
-        options: [
-          { id: "rare", label: "Редкая и опасная" },
-          { id: "common", label: "Обычная часть жизни" },
-          { id: "none", label: "Почти отсутствует" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "round_2",
-    thinkingTitle: "Агент уточняет детали…",
-    thinkingDescription:
-      "Строю конфликты и силы мира. Нужны ваши ответы, чтобы сделать основу точнее.",
-    questions: [
-      {
-        id: "main_conflict",
-        question: "Что является главным конфликтом мира?",
-        options: [
-          { id: "war", label: "Война/экспансия" },
-          { id: "intrigue", label: "Интриги/политика" },
-          { id: "cataclysm", label: "Катастрофа/угроза" },
-        ],
-      },
-      {
-        id: "protagonists",
-        question: "За кого мы обычно играем?",
-        options: [
-          { id: "heroes", label: "Герои/избранные" },
-          { id: "survivors", label: "Выжившие/аутсайдеры" },
-          { id: "agents", label: "Агенты/наёмники" },
-        ],
-      },
-    ],
-  },
-];
 
 // Events
 export const openCreateWorldForm = createEvent();
 export const closeCreateWorldForm = createEvent();
 export const nextStep = createEvent();
 export const prevStep = createEvent();
+export const setStep = createEvent<number>();
 export const setWorldDescription = createEvent<string>();
 export const setPlotType = createEvent<PlotTypeId>();
 export const setPlotTypeCustom = createEvent<string>();
@@ -103,6 +55,7 @@ export const $isFormOpen = createStore(false)
 export const $currentStep = createStore(0)
   .on(nextStep, (step) => Math.min(TOTAL_STEPS - 1, step + 1))
   .on(prevStep, (step) => Math.max(0, step - 1))
+  .on(setStep, (_, step) => Math.max(0, Math.min(TOTAL_STEPS - 1, step)))
   .reset(closeCreateWorldForm);
 
 export const $worldDescription = createStore("")
@@ -133,31 +86,45 @@ export const $foundationCanContinue = combine(
   }
 );
 
-// --- HITL (mock) ---
+// --- HITL (SSE run) ---
 
-const startHitl = createEvent();
-const hitlStartThinking = createEvent();
-const hitlShowQuestions = createEvent();
-const hitlDone = createEvent();
-const hitlAnswersSubmitted = createEvent();
-const hitlAdvanceRound = createEvent();
-const hitlRoundSubmitted = createEvent<number>();
-
-const waitFx = createEffect<number, void>(
-  async (ms) => await new Promise((resolve) => setTimeout(resolve, ms))
-);
+const hitlReset = createEvent();
+const hitlStarted = createEvent<string>();
+const hitlThinking = createEvent();
+const hitlQuestionsReceived = createEvent<HitlQuestion[]>();
+const hitlStageReceived = createEvent<string>();
+const hitlErrorReceived = createEvent<string>();
+const worldSkeletonReceived = createEvent<{
+  game_prompt?: string;
+  world_bible?: string;
+  global_conflict?: string | null;
+  gamePrompt?: string;
+  worldBible?: string;
+  globalConflict?: string;
+}>();
 
 export const $hitlPhase = createStore<HitlPhase>("thinking")
-  .on(startHitl, () => "thinking")
-  .on(hitlStartThinking, () => "thinking")
-  .on(hitlShowQuestions, () => "questions")
-  .on(hitlDone, () => "done")
-  .reset(closeCreateWorldForm);
+  .on(hitlStarted, () => "thinking")
+  .on(hitlThinking, () => "thinking")
+  .on(hitlQuestionsReceived, () => "questions")
+  .on(worldSkeletonReceived, () => "done")
+  .reset([closeCreateWorldForm, hitlReset]);
 
-export const $hitlRoundIndex = createStore(0)
-  .on(startHitl, () => 0)
-  .on(hitlAdvanceRound, (idx) => idx + 1)
-  .reset(closeCreateWorldForm);
+export const $hitlRunId = createStore<string | null>(null)
+  .on(hitlStarted, (_, runId) => runId)
+  .reset([closeCreateWorldForm, hitlReset]);
+
+export const $hitlStage = createStore<string>("analyzing")
+  .on(hitlStageReceived, (_, stage) => stage)
+  .reset([closeCreateWorldForm, hitlReset]);
+
+export const $hitlError = createStore<string | null>(null)
+  .on(hitlErrorReceived, (_, msg) => msg)
+  .reset([closeCreateWorldForm, hitlReset, hitlStarted]);
+
+export const $hitlQuestions = createStore<HitlQuestion[]>([])
+  .on(hitlQuestionsReceived, (_, qs) => qs)
+  .reset([closeCreateWorldForm, hitlReset, worldSkeletonReceived]);
 
 export const $hitlAnswers = createStore<Record<string, HitlAnswer>>({})
   .on(hitlOptionSelected, (state, { questionId, optionId }) => ({
@@ -168,21 +135,17 @@ export const $hitlAnswers = createStore<Record<string, HitlAnswer>>({})
     ...state,
     [questionId]: { ...(state[questionId] ?? {}), freeText: text },
   }))
-  .reset([closeCreateWorldForm, startHitl]);
-
-export const $hitlCurrentRound = combine($hitlRoundIndex, (idx) => {
-  return hitlScript[idx] ?? null;
-});
+  .reset([closeCreateWorldForm, hitlReset, hitlQuestionsReceived]);
 
 export const $hitlCanContinue = combine(
   $hitlPhase,
-  $hitlCurrentRound,
+  $hitlQuestions,
   $hitlAnswers,
-  (phase, round, answers) => {
+  (phase, questions, answers) => {
     if (phase !== "questions") return false;
-    if (!round) return false;
+    if (!questions.length) return false;
 
-    return round.questions.every((q) => {
+    return questions.every((q) => {
       const a = answers[q.id];
       const hasOption = !!a?.selectedOptionId;
       const hasText = !!a?.freeText?.trim();
@@ -191,35 +154,202 @@ export const $hitlCanContinue = combine(
   }
 );
 
-// Entering step 2 starts HITL
+const closeSseRequested = createEvent();
+const sseConnected = createEvent<SseClient>();
+
+const closeSseFx = createEffect<SseClient | null, void>((client) => {
+  client?.close();
+});
+
+export const $hitlSseClient = createStore<SseClient | null>(null)
+  .on(sseConnected, (_, client) => client)
+  .reset([closeCreateWorldForm, hitlReset]);
+
+sample({
+  clock: closeSseRequested,
+  source: $hitlSseClient,
+  target: closeSseFx,
+});
+
+sample({
+  clock: closeSseFx.done,
+  target: hitlReset,
+});
+
+const startWorldArchitectRunFx = createEffect<
+  {
+    userId: string;
+    worldDescription: string;
+    plotType: PlotTypeId;
+    plotTypeCustom: string;
+    isGlobalConflictEnabled: boolean;
+  },
+  { run_id: string }
+>(
+  async ({
+    userId,
+    worldDescription,
+    plotType,
+    plotTypeCustom,
+    isGlobalConflictEnabled,
+  }) => {
+    return startWorldArchitectRun(userId, {
+      world_description: worldDescription,
+      plot_type: plotType,
+      plot_type_custom: plotType === "custom" ? plotTypeCustom : null,
+      is_global_conflict_enabled: isGlobalConflictEnabled,
+    });
+  }
+);
+
+const connectSseFx = createEffect<string, SseClient>((runId) => {
+  const client = connectSse({
+    path: `/api/v1/runs/${runId}/events`,
+    handlers: {
+      stage: (env) => {
+        const stage = (env.payload as { stage?: string })?.stage ?? "analyzing";
+        hitlStageReceived(stage);
+      },
+      hitl_questions: (env) => {
+        const qs = (env.payload as { questions?: HitlQuestion[] })?.questions ?? [];
+        hitlQuestionsReceived(qs);
+      },
+      world_skeleton: (env) => {
+        worldSkeletonReceived(env.payload as SseEnvelope["payload"]);
+      },
+      error: (env) => {
+        const msg =
+          (env.payload as { message?: string })?.message ?? "Unknown error";
+        hitlErrorReceived(msg);
+      },
+      done: () => {
+        // no-op (phase is derived from world_skeleton)
+      },
+    },
+    onError: () => hitlErrorReceived("SSE connection error"),
+  });
+  return client;
+});
+
+sample({
+  clock: connectSseFx.doneData,
+  target: sseConnected,
+});
+
+// Entering step 2 starts a new run + SSE subscription
 sample({
   clock: $currentStep,
   filter: (step) => step === 1,
-  target: startHitl,
+  source: {
+    userId: userModel.$selectedUserId,
+    worldDescription: $worldDescription,
+    plotType: $plotType,
+    plotTypeCustom: $plotTypeCustom,
+    isGlobalConflictEnabled: $isGlobalConflictEnabled,
+  },
+  filter: (src): src is {
+    userId: string;
+    worldDescription: string;
+    plotType: PlotTypeId;
+    plotTypeCustom: string;
+    isGlobalConflictEnabled: boolean;
+  } => Boolean(src.userId) && Boolean(src.plotType),
+  target: startWorldArchitectRunFx,
 });
 
-// Start thinking -> delay -> show questions
 sample({
-  clock: startHitl,
-  fn: () => HITL_THINKING_DELAY_MS,
-  target: waitFx,
+  clock: $currentStep,
+  filter: (step) => step === 1,
+  source: userModel.$selectedUserId,
+  filter: (userId) => !userId,
+  fn: () => "Не выбран пользователь (X-User-Id).",
+  target: hitlErrorReceived,
 });
 
 sample({
-  clock: waitFx.done,
-  target: hitlShowQuestions,
+  clock: startWorldArchitectRunFx.doneData,
+  fn: (res) => res.run_id,
+  target: hitlStarted,
 });
 
-// Clicking continue on HITL:
-// - if questions and all answered -> submit (switch to thinking)
-// - if done -> go next step
+sample({
+  clock: hitlStarted,
+  target: connectSseFx,
+});
+
+// Close SSE when leaving step 2 or closing the form
+sample({
+  clock: $currentStep,
+  filter: (step) => step !== 1,
+  target: closeSseRequested,
+});
+
+sample({
+  clock: closeCreateWorldForm,
+  target: closeSseRequested,
+});
+
+const submitWorldArchitectAnswersFx = createEffect<
+  { userId: string; runId: string; answers: Record<string, HitlAnswer> },
+  void
+>(async ({ userId, runId, answers }) => {
+  const payloadAnswers: Record<
+    string,
+    { selected_option_id?: string; free_text?: string }
+  > = {};
+
+  for (const [qid, a] of Object.entries(answers)) {
+    payloadAnswers[qid] = {
+      selected_option_id: a.selectedOptionId,
+      free_text: a.freeText,
+    };
+  }
+
+  await submitWorldArchitectAnswers(userId, runId, { answers: payloadAnswers });
+});
+
+// Continue button submits answers when we are in questions phase
 sample({
   clock: hitlContinueClicked,
-  source: { phase: $hitlPhase, canContinue: $hitlCanContinue },
-  filter: ({ phase, canContinue }) => phase === "questions" && canContinue,
-  target: hitlAnswersSubmitted,
+  source: {
+    phase: $hitlPhase,
+    canContinue: $hitlCanContinue,
+    userId: userModel.$selectedUserId,
+    runId: $hitlRunId,
+    answers: $hitlAnswers,
+  },
+  filter: (src): src is {
+    phase: HitlPhase;
+    canContinue: boolean;
+    userId: string;
+    runId: string;
+    answers: Record<string, HitlAnswer>;
+  } =>
+    src.phase === "questions" &&
+    src.canContinue &&
+    Boolean(src.userId) &&
+    Boolean(src.runId),
+  fn: (src) => ({
+    userId: src.userId,
+    runId: src.runId,
+    answers: src.answers,
+  }),
+  target: submitWorldArchitectAnswersFx,
 });
 
+// After submitting answers, go back to thinking state and wait for SSE updates
+sample({
+  clock: submitWorldArchitectAnswersFx.done,
+  target: hitlThinking,
+});
+
+sample({
+  clock: submitWorldArchitectAnswersFx.done,
+  fn: () => "building",
+  target: hitlStageReceived,
+});
+
+// Continue button in done state moves to step 3
 sample({
   clock: hitlContinueClicked,
   source: $hitlPhase,
@@ -227,111 +357,36 @@ sample({
   target: nextStep,
 });
 
-// Submitting answers: either advance to next round (thinking) or finish HITL (done)
+// Auto-advance to step 3 as soon as the skeleton is ready (avoid redundant interim screen)
 sample({
-  clock: hitlAnswersSubmitted,
-  source: $hitlRoundIndex,
-  target: hitlRoundSubmitted,
+  clock: worldSkeletonReceived,
+  source: $currentStep,
+  filter: (step) => step === 1,
+  target: nextStep,
 });
 
+// Prevent duplicate world_skeleton events from advancing steps again
 sample({
-  clock: hitlRoundSubmitted,
-  filter: (idx) => idx < hitlScript.length - 1,
-  target: [hitlAdvanceRound, hitlStartThinking],
+  clock: worldSkeletonReceived,
+  target: closeSseRequested,
 });
 
-sample({
-  clock: hitlRoundSubmitted,
-  filter: (idx) => idx >= hitlScript.length - 1,
-  target: hitlDone,
-});
-
-sample({
-  clock: hitlAdvanceRound,
-  fn: () => HITL_THINKING_DELAY_MS,
-  target: waitFx,
-});
-
-// When HITL completes, allow moving to step 3 via button (phase done)
-// (navigation to step 3 is triggered from UI by hitlContinueClicked when phase==="done")
-
-// --- World draft (step 3 stub) ---
-
-const buildWorldDraft = createEvent();
-const worldDraftBuilt = createEvent<WorldDraft>();
+// --- World draft (step 3) ---
 
 export const $worldDraft = createStore<WorldDraft>({
-  overview: "",
-  geography: "",
-  societies: "",
-  conflicts: "",
-  tone: "",
+  gamePrompt: "",
+  worldBible: "",
+  globalConflict: "",
 })
-  .on(worldDraftBuilt, (_, draft) => draft)
+  .on(worldSkeletonReceived, (_, payload) => ({
+    gamePrompt: (payload.game_prompt ?? payload.gamePrompt ?? "").trim(),
+    worldBible: (payload.world_bible ?? payload.worldBible ?? "").trim(),
+    globalConflict:
+      (payload.global_conflict ?? payload.globalConflict ?? "")?.toString().trim() ??
+      "",
+  }))
   .on(setWorldDraftField, (state, { field, value }) => ({
     ...state,
     [field]: value,
   }))
   .reset(closeCreateWorldForm);
-
-const buildDraftFromAnswers = (
-  description: string,
-  plotType: PlotTypeId | null,
-  plotTypeCustom: string,
-  isGlobalConflictEnabled: boolean,
-  answers: Record<string, HitlAnswer>
-): WorldDraft => {
-  const genre = answers.genre?.selectedOptionId ?? "";
-  const magic = answers.magic_tech?.selectedOptionId ?? "";
-  const conflict = answers.main_conflict?.selectedOptionId ?? "";
-  const protagonists = answers.protagonists?.selectedOptionId ?? "";
-
-  const plotText = (() => {
-    if (!plotType) return "";
-    if (plotType !== "custom") return plotType;
-    return plotTypeCustom.trim();
-  })();
-
-  return {
-    overview: [
-      `Кратко: ${description.trim()}`.trim(),
-      plotText ? `Тип игры/сюжета: ${plotText}` : null,
-      `Глобальный конфликт: ${isGlobalConflictEnabled ? "нужен" : "не нужен"}`,
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    geography:
-      "География (заглушка): 2–3 ключевые локации, климат, транспорт/переходы.",
-    societies: `Общества (заглушка): ключевые силы и группы. protagonists=${protagonists}`,
-    conflicts: isGlobalConflictEnabled
-      ? `Конфликты (заглушка): conflict=${conflict || "TBD"}`
-      : "Конфликты (заглушка): без глобального конфликта — локальные проблемы, повседневные цели, эпизодические зацепки.",
-    tone: `Тон (заглушка): genre=${genre}, magic=${magic}`,
-  };
-};
-
-sample({
-  clock: $currentStep,
-  filter: (step) => step === 2,
-  target: buildWorldDraft,
-});
-
-sample({
-  clock: buildWorldDraft,
-  source: {
-    description: $worldDescription,
-    plotType: $plotType,
-    plotTypeCustom: $plotTypeCustom,
-    isGlobalConflictEnabled: $isGlobalConflictEnabled,
-    answers: $hitlAnswers,
-  },
-  fn: (src) =>
-    buildDraftFromAnswers(
-      src.description,
-      src.plotType,
-      src.plotTypeCustom,
-      src.isGlobalConflictEnabled,
-      src.answers
-    ),
-  target: worldDraftBuilt,
-});

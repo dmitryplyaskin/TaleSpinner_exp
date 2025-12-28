@@ -37,6 +37,8 @@ class _RunState:
     cancelled: bool = False
     seq: int = 0
     subscribers: set[asyncio.Queue[str]] = field(default_factory=set)
+    workflow_payloads: dict[str, object] = field(default_factory=dict)
+    workflow_events: dict[str, asyncio.Event] = field(default_factory=dict)
 
 
 _runs: dict[str, _RunState] = {}
@@ -71,6 +73,9 @@ async def cancel_run(run_id: str) -> RunStatus | None:
         state.cancelled = True
         state.status.state = "cancelled"
         state.status.updated_at = _utc_now()
+        # Unblock any workflows waiting for input
+        for ev in state.workflow_events.values():
+            ev.set()
 
     await publish(run_id, "run_cancelled", {"run_id": run_id})
     return await get_run_status(run_id)
@@ -152,5 +157,75 @@ async def subscribe(
             state = _runs.get(run_id)
             if state:
                 state.subscribers.discard(q)
+
+
+async def is_cancelled(run_id: str) -> bool:
+    async with _lock:
+        state = _runs.get(run_id)
+        return bool(state.cancelled) if state else False
+
+
+async def submit_workflow_payload(run_id: str, key: str, payload: object) -> bool:
+    """
+    Store a workflow payload (e.g. HITL answers) and signal waiters.
+    Returns False if run not found.
+    """
+    async with _lock:
+        state = _runs.get(run_id)
+        if not state:
+            return False
+        state.workflow_payloads[key] = payload
+        ev = state.workflow_events.get(key)
+        if not ev:
+            ev = asyncio.Event()
+            state.workflow_events[key] = ev
+        ev.set()
+        return True
+
+
+async def wait_workflow_payload(
+    run_id: str, key: str, *, timeout_seconds: float | None = None
+) -> object | None:
+    """
+    Wait until a workflow payload for `key` is submitted.
+    Returns the stored payload (and keeps it stored) or None on timeout / missing run.
+    """
+    async with _lock:
+        state = _runs.get(run_id)
+        if not state:
+            return None
+        ev = state.workflow_events.get(key)
+        if not ev:
+            ev = asyncio.Event()
+            state.workflow_events[key] = ev
+
+    try:
+        if timeout_seconds is None:
+            await ev.wait()
+        else:
+            await asyncio.wait_for(ev.wait(), timeout=timeout_seconds)
+    except TimeoutError:
+        return None
+
+    async with _lock:
+        state = _runs.get(run_id)
+        if not state:
+            return None
+        return state.workflow_payloads.get(key)
+
+
+async def pop_workflow_payload(run_id: str, key: str) -> object | None:
+    """
+    Pop a stored workflow payload and reset its event.
+    """
+    async with _lock:
+        state = _runs.get(run_id)
+        if not state:
+            return None
+        payload = state.workflow_payloads.pop(key, None)
+        ev = state.workflow_events.get(key)
+        if ev:
+            ev.clear()
+        return payload
 
 

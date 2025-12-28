@@ -9,6 +9,7 @@ export {
   $plotTypeCustom,
   $isGlobalConflictEnabled,
   $foundationCanContinue,
+  setStep,
 } from "./model/create-world-model";
 
 

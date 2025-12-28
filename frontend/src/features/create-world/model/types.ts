@@ -44,11 +44,18 @@ export interface HitlAnswer {
 }
 
 export interface WorldDraft {
-  overview: string;
-  geography: string;
-  societies: string;
-  conflicts: string;
-  tone: string;
+  /**
+   * Main game context for the in-game instruction prompt.
+   */
+  gamePrompt: string;
+  /**
+   * Detailed but concise world description for follow-up generations.
+   */
+  worldBible: string;
+  /**
+   * Optional global conflict (empty if not needed / disabled).
+   */
+  globalConflict: string;
 }
 
 

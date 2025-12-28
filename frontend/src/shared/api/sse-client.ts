@@ -75,5 +75,3 @@ export const connectSse = ({
     close: () => es.close(),
   };
 };
-
-

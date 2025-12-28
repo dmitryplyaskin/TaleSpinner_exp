@@ -10,5 +10,3 @@ export type SseEventHandler<TPayload = unknown> = (
   envelope: SseEnvelope<TPayload>,
   raw: MessageEvent<string>
 ) => void;
-
-
